@@ -51,6 +51,13 @@ body {
   gap: 8px;
 }
 
+.typing-indicator {
+  padding-top: 4px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  min-height: 16px;
+}
+
 .message {
   padding: 8px 10px;
   border-radius: 8px;
@@ -112,3 +119,23 @@ body {
   background: #4338ca;
 }
 
+.chat-footer .icon-button {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  background: #1f2937;
+}
+
+.chat-footer .icon-button:hover {
+  background: #374151;
+}
+
+#imageInput {
+  display: none;
+}
+
+.message-image {
+  max-width: 220px;
+  border-radius: 6px;
+  margin-top: 4px;
+  display: block;
+}

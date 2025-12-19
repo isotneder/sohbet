@@ -14,9 +14,17 @@
 
       <main class="chat-main">
         <div id="messages" class="messages"></div>
+        <div id="typingIndicator" class="typing-indicator"></div>
       </main>
 
       <footer class="chat-footer">
+        <button id="imageButton" class="icon-button">📷</button>
+        <input
+          id="imageInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+        />
         <input
           id="nameInput"
           type="text"
@@ -36,9 +44,9 @@
     <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
     <!-- Uygulama kodu -->
     <script src="app.js"></script>
   </body>
 </html>
-
