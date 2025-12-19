@@ -16,16 +16,21 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
+  // Diğer scriptler için
+  window._db = db;
 
-  // Sayfa isimleri (user1 / user2)
+  // Sayfa isimleri (user1 / user2 / ...)
   const myNameFromPage = window.MY_NAME || null;
   const peerNameFromPage = window.PEER_NAME || null;
   const otherName = peerNameFromPage || null;
+  const userKey = window.USER_KEY || null; // "user1", "user2" ...
 
   // Şifre gerekli mi?
   function canUseChat() {
-    if (!window.CHAT_PASSWORD) return true; // şifre tanımlı değilse serbest
-    return !!window.__CHAT_AUTH_OK;
+    if (window.REQUIRE_LOGIN) {
+      return !!window.__CHAT_AUTH_OK;
+    }
+    return true;
   }
 
   // DOM
@@ -214,7 +219,7 @@
     });
   }
 
-  // YAZIYOR DURUMU
+  // Yazıyor durumu
   const typingRef = db.ref("typing");
   let typingTimeout = null;
 
@@ -255,7 +260,7 @@
       : "";
   });
 
-  // FOTOĞRAF GÖRÜNTÜLEME (tek görünmelik, 10 saniye)
+  // Fotoğraf görüntüleme (tek görünmelik, 10 saniye)
   function closeViewer() {
     if (viewerOverlay) viewerOverlay.classList.add("hidden");
     if (viewerImage) viewerImage.src = "";
@@ -325,7 +330,7 @@
     });
   }
 
-  // MESAJLARI DİNLE + GÖRÜLDÜ DURUMU
+  // Mesajlar + görüldü durumları
   const messagesRef = db
     .ref("messages")
     .orderByChild("timestamp")
@@ -445,5 +450,105 @@
       el.parentNode.removeChild(el);
     }
   });
+
+  // Giriş overlay'i (şifre)
+  function initLoginOverlay() {
+    const overlay = document.getElementById("loginOverlay");
+    const chat = document.querySelector(".chat-container");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginButton = document.getElementById("loginButton");
+    const loginError = document.getElementById("loginError");
+
+    if (!overlay || !chat || !userKey) {
+      // Bu sayfada giriş yok
+      window.__CHAT_AUTH_OK = true;
+      return;
+    }
+
+    const sessionKey = `chatAuthOk_${userKey}`;
+    if (sessionStorage.getItem(sessionKey) === "true") {
+      window.__CHAT_AUTH_OK = true;
+      overlay.style.display = "none";
+      chat.classList.remove("hidden-chat");
+      return;
+    }
+
+    const passwordRef = db.ref("passwords").child(userKey);
+    let currentPassword = null;
+
+    passwordRef.on("value", (snapshot) => {
+      currentPassword = snapshot.val() || "";
+    });
+
+    function tryLogin() {
+      const value = (passwordInput && passwordInput.value.trim()) || "";
+      if (!currentPassword) {
+        if (loginError) {
+          loginError.textContent = "Bu kullanıcı için şifre ayarlanmamış.";
+        }
+        return;
+      }
+
+      if (value === currentPassword) {
+        window.__CHAT_AUTH_OK = true;
+        sessionStorage.setItem(sessionKey, "true");
+        overlay.style.display = "none";
+        chat.classList.remove("hidden-chat");
+        if (loginError) loginError.textContent = "";
+      } else if (loginError) {
+        loginError.textContent = "Şifre yanlış.";
+      }
+    }
+
+    if (loginButton) {
+      loginButton.addEventListener("click", tryLogin);
+    }
+    if (passwordInput) {
+      passwordInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          tryLogin();
+        }
+      });
+    }
+  }
+
+  // User 1 tarafında şifre ayarlama paneli
+  function initAdminPanel() {
+    const panel = document.getElementById("adminPanel");
+    if (!panel) return;
+
+    const statusEl = document.getElementById("adminStatus");
+
+    panel.querySelectorAll(".admin-row").forEach((row) => {
+      const key = row.getAttribute("data-user");
+      const input = row.querySelector(".admin-password-input");
+      const button = row.querySelector(".admin-save-button");
+      const labelEl = row.querySelector(".admin-user-label");
+
+      if (!key || !input || !button) return;
+
+      button.addEventListener("click", () => {
+        const value = input.value.trim();
+        db.ref("passwords")
+          .child(key)
+          .set(value)
+          .then(() => {
+            if (statusEl) {
+              const name = labelEl ? labelEl.textContent : key;
+              statusEl.textContent = `${name} şifresi kaydedildi.`;
+            }
+          })
+          .catch((err) => {
+            if (statusEl) {
+              statusEl.textContent = "Hata: " + err.message;
+            }
+          });
+      });
+    });
+  }
+
+  initLoginOverlay();
+  initAdminPanel();
 })();
 

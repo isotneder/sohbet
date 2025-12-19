@@ -8,10 +8,10 @@
 body {
   background: #0f172a;
   color: #e5e7eb;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
 }
 
 .hidden {
@@ -298,4 +298,72 @@ body {
   margin-top: 6px;
   font-size: 0.8rem;
   color: #f97373;
+}
+
+/* User 1 için şifre ayar paneli */
+.admin-panel {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #020617;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  width: 220px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  overflow-y: auto;
+}
+
+.admin-layout {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.admin-panel h2 {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.admin-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.admin-user-label {
+  font-weight: 500;
+}
+
+.admin-password-input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #374151;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+.admin-save-button {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  background: #4f46e5;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.admin-save-button:hover {
+  background: #4338ca;
+}
+
+#adminStatus {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #a5b4fc;
 }

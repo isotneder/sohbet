@@ -8,33 +8,155 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="chat-container">
-      <header class="chat-header">
-        <img src="logo.png" alt="Logo" class="logo" />
-        <h1></h1>
-      </header>
-
-      <main class="chat-main">
-        <div id="messages" class="messages"></div>
-        <div id="typingIndicator" class="typing-indicator"></div>
-      </main>
-
-      <footer class="chat-footer">
-        <button id="imageButton" class="icon-button">📷</button>
+    <div id="loginOverlay" class="login-overlay">
+      <div class="login-box">
+        <h2>Giriş</h2>
         <input
-          id="imageInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-        />
-        <input
-          id="messageInput"
-          type="text"
-          placeholder="Mesaj yaz..."
+          type="password"
+          id="passwordInput"
+          placeholder="Şifre"
           autocomplete="off"
         />
-        <button id="sendButton">Gönder</button>
-      </footer>
+        <button id="loginButton">Giriş yap</button>
+        <div id="loginError" class="login-error"></div>
+      </div>
+    </div>
+
+    <div class="admin-layout">
+      <aside id="adminPanel" class="admin-panel">
+        <h2>Kullanıcı Şifreleri</h2>
+
+        <div class="admin-row" data-user="user1">
+          <span class="admin-user-label">User 1</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user2">
+          <span class="admin-user-label">User 2</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user3">
+          <span class="admin-user-label">User 3</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user4">
+          <span class="admin-user-label">User 4</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user5">
+          <span class="admin-user-label">User 5</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user6">
+          <span class="admin-user-label">User 6</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user7">
+          <span class="admin-user-label">User 7</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user8">
+          <span class="admin-user-label">User 8</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user9">
+          <span class="admin-user-label">User 9</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div class="admin-row" data-user="user10">
+          <span class="admin-user-label">User 10</span>
+          <input
+            type="text"
+            class="admin-password-input"
+            placeholder="Şifre"
+          />
+          <button type="button" class="admin-save-button">Kaydet</button>
+        </div>
+
+        <div id="adminStatus"></div>
+      </aside>
+
+      <div class="chat-container hidden-chat">
+        <header class="chat-header">
+          <img src="logo.png" alt="Logo" class="logo" />
+          <h1></h1>
+        </header>
+
+        <main class="chat-main">
+          <div id="messages" class="messages"></div>
+          <div id="typingIndicator" class="typing-indicator"></div>
+        </main>
+
+        <footer class="chat-footer">
+          <button id="imageButton" class="icon-button">🖼</button>
+          <input
+            id="imageInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+          />
+          <input
+            id="messageInput"
+            type="text"
+            placeholder="Mesaj yaz..."
+            autocomplete="off"
+          />
+          <button id="sendButton">Gönder</button>
+        </footer>
+      </div>
     </div>
 
     <div id="viewerOverlay" class="viewer-overlay hidden">
@@ -49,6 +171,8 @@
     <script>
       window.MY_NAME = "User 1";
       window.PEER_NAME = "User 2";
+      window.USER_KEY = "user1";
+      window.REQUIRE_LOGIN = true;
     </script>
 
     <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
@@ -57,5 +181,25 @@
 
     <!-- Uygulama kodu -->
     <script src="app.js"></script>
+
+    <!-- İlk girişte user1 için şifre otomatik ayarla -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!window.firebase) return;
+        try {
+          const db = firebase.database();
+          const ref = db.ref("passwords").child("user1");
+          ref.once("value").then((snap) => {
+            const current = snap.val();
+            if (current === null || current === "") {
+              // Burayı istediğin ilk şifreye göre değiştir
+              ref.set("1234");
+            }
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    </script>
   </body>
 </html>
