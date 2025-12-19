@@ -79,28 +79,67 @@ if (messageInput) {
   });
 }
 
-// Fotoğrafı base64 olarak DB'ye kaydet (Storage kullanmıyoruz)
+// Fotoğrafı küçültüp base64 olarak DB'ye kaydet (Storage yok)
+function resizeImageToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const img = new Image();
+
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      const maxSize = 900; // max genişlik/yükseklik
+
+      if (width > maxSize || height > maxSize) {
+        const scale = Math.min(maxSize / width, maxSize / height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      resolve(dataUrl);
+    };
+
+    img.onerror = reject;
+
+    reader.readAsDataURL(file);
+  });
+}
+
 function sendImage(file) {
   const name = getCurrentName();
   if (!file) return;
 
-  const maxSize = 2 * 1024 * 1024; // 2MB
-  if (file.size > maxSize) {
-    alert("Fotoğraf çok büyük (max 2MB).");
+  // Dosya çok uçuk büyükse (ör. 15MB) engelle
+  const maxFileSize = 15 * 1024 * 1024;
+  if (file.size > maxFileSize) {
+    alert("Fotoğraf çok büyük (max ~15MB).");
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-
-    db.ref("messages").push({
-      name,
-      imageData: dataUrl,
-      timestamp: Date.now(),
+  resizeImageToDataUrl(file)
+    .then((dataUrl) => {
+      db.ref("messages").push({
+        name,
+        imageData: dataUrl,
+        timestamp: Date.now(),
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Fotoğraf hazırlanırken hata oluştu.");
     });
-  };
-  reader.readAsDataURL(file);
 }
 
 if (imageButton && imageInput) {
@@ -184,9 +223,10 @@ db.ref("messages")
 
       const contentEl = document.createElement("div");
 
-      if (msg.imageData) {
+      const imageSrc = msg.imageData || msg.imageUrl || null;
+      if (imageSrc) {
         const imgEl = document.createElement("img");
-        imgEl.src = msg.imageData;
+        imgEl.src = imageSrc;
         imgEl.alt = "Fotoğraf";
         imgEl.classList.add("message-image");
         contentEl.appendChild(imgEl);
