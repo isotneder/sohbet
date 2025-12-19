@@ -79,7 +79,7 @@ if (messageInput) {
   });
 }
 
-// Fotoğrafı küçültüp base64 olarak DB'ye kaydet (Storage yok)
+// Fotoğrafı küçültüp base64 olarak DB'ye kaydet
 function resizeImageToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -121,10 +121,9 @@ function sendImage(file) {
   const name = getCurrentName();
   if (!file) return;
 
-  // Dosya çok uçuk büyükse (ör. 15MB) engelle
-  const maxFileSize = 15 * 1024 * 1024;
+  const maxFileSize = 20 * 1024 * 1024; // 20MB
   if (file.size > maxFileSize) {
-    alert("Fotoğraf çok büyük (max ~15MB).");
+    alert("Fotoğraf çok büyük (max 20MB).");
     return;
   }
 
@@ -196,12 +195,13 @@ typingRef.on("value", (snapshot) => {
     : "";
 });
 
-// Mesajları dinle
+// Mesajları dinle (fotoğraf tek görünmelik)
 db.ref("messages")
   .orderByChild("timestamp")
   .limitToLast(100)
   .on("value", (snapshot) => {
     const currentName = getCurrentName();
+    const viewerKey = myNameFromPage || currentName;
     messagesDiv.innerHTML = "";
 
     snapshot.forEach((child) => {
@@ -224,12 +224,28 @@ db.ref("messages")
       const contentEl = document.createElement("div");
 
       const imageSrc = msg.imageData || msg.imageUrl || null;
-      if (imageSrc) {
+      const seenBy = msg.seenBy || {};
+      const alreadySeen = viewerKey && seenBy[viewerKey];
+
+      if (imageSrc && !alreadySeen) {
         const imgEl = document.createElement("img");
         imgEl.src = imageSrc;
         imgEl.alt = "Fotoğraf";
         imgEl.classList.add("message-image");
         contentEl.appendChild(imgEl);
+
+        // Bu kullanıcı için tek görünmelik: ilk render'da görüldü say
+        if (viewerKey) {
+          db.ref("messages")
+            .child(child.key)
+            .child("seenBy")
+            .child(viewerKey)
+            .set(true);
+        }
+      } else if (imageSrc && alreadySeen) {
+        const infoEl = document.createElement("div");
+        infoEl.textContent = "Bu fotoğrafı daha önce gördün.";
+        contentEl.appendChild(infoEl);
       }
 
       if (msg.text) {
