@@ -43,6 +43,13 @@ body {
   font-size: 1.1rem;
 }
 
+.chat-header img.logo {
+  height: 24px;
+  width: 24px;
+  border-radius: 6px;
+  margin-right: 8px;
+}
+
 .chat-main {
   flex: 1;
   padding: 12px;
@@ -172,6 +179,13 @@ body {
 .view-image-button[disabled] {
   opacity: 0.6;
   cursor: default;
+}
+
+.view-image-opened {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  opacity: 0.8;
 }
 
 .viewer-overlay {

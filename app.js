@@ -31,6 +31,9 @@ const viewerImage = document.getElementById("viewerImage");
 const viewerCountdown = document.getElementById("viewerCountdown");
 const viewerClose = document.getElementById("viewerClose");
 let viewerTimer = null;
+let isUploadingImage = false;
+let lastSentText = "";
+let lastSentTime = 0;
 
 // Başlıkta karşı tarafın adı
 if (headerTitle) {
@@ -63,6 +66,14 @@ function sendMessage() {
   const name = getCurrentName();
   const text = messageInput.value.trim();
   if (!text) return;
+
+  // Aynı mesajı çok kısa sürede iki kez göndermeyi engelle
+  const now = Date.now();
+  if (text === lastSentText && now - lastSentTime < 400) {
+    return;
+  }
+  lastSentText = text;
+  lastSentTime = now;
 
   db.ref("messages").push({
     name,
@@ -127,7 +138,7 @@ function resizeImageToDataUrl(file) {
 
 function sendImage(file) {
   const name = getCurrentName();
-  if (!file) return;
+  if (!file || isUploadingImage) return;
 
   const maxFileSize = 20 * 1024 * 1024; // 20MB
   if (file.size > maxFileSize) {
@@ -135,9 +146,12 @@ function sendImage(file) {
     return;
   }
 
+  isUploadingImage = true;
+  if (imageButton) imageButton.disabled = true;
+
   resizeImageToDataUrl(file)
     .then((dataUrl) => {
-      db.ref("messages").push({
+      return db.ref("messages").push({
         name,
         imageData: dataUrl,
         timestamp: Date.now(),
@@ -146,6 +160,10 @@ function sendImage(file) {
     .catch((err) => {
       console.error(err);
       alert("Fotoğraf hazırlanırken hata oluştu.");
+    })
+    .finally(() => {
+      isUploadingImage = false;
+      if (imageButton) imageButton.disabled = false;
     });
 }
 
@@ -304,7 +322,7 @@ db.ref("messages")
       const seenBy = msg.seenBy || {};
       const alreadySeenPhoto = viewerKey && seenBy[viewerKey];
 
-      // Fotoğraf: hiç açılmadıysa "Fotoğrafı gör" butonu göster, açılmışsa gizle
+      // Fotoğraf: hiç açılmadıysa "Fotoğrafı gör" butonu göster
       if (imageSrc && !alreadySeenPhoto) {
         const button = document.createElement("button");
         button.classList.add("view-image-button");
@@ -313,6 +331,11 @@ db.ref("messages")
           openViewer(child.key, imageSrc, viewerKey, button);
         });
         contentEl.appendChild(button);
+      } else if (imageSrc && alreadySeenPhoto) {
+        const openedEl = document.createElement("div");
+        openedEl.classList.add("view-image-opened");
+        openedEl.textContent = "Açıldı";
+        contentEl.appendChild(openedEl);
       }
 
       if (msg.text) {
@@ -345,4 +368,3 @@ db.ref("messages")
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
   });
-
