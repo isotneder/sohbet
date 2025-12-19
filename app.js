@@ -287,9 +287,23 @@ db.ref("messages")
     const viewerKey = myNameFromPage || currentName;
     messagesDiv.innerHTML = "";
 
+    const seenSignatures = new Set();
+
     snapshot.forEach((child) => {
       const msg = child.val();
       const isMe = msg.name === currentName;
+
+      const signature = [
+        msg.name || "",
+        msg.timestamp || "",
+        msg.text || "",
+        msg.imageData ? msg.imageData.slice(0, 20) : "",
+      ].join("|");
+
+      if (seenSignatures.has(signature)) {
+        return;
+      }
+      seenSignatures.add(signature);
 
       // Karşıdan gelen metin/mesajları okundu işaretle (readBy)
       if (!isMe && viewerKey) {
