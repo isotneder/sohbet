@@ -50,10 +50,60 @@ body {
   margin-right: 8px;
 }
 
+.conversation-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #020617;
+  border-bottom: 1px solid #1f2937;
+  overflow-x: auto;
+}
+
+.conversation-tabs {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.conversation-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.conversation-tab {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.conversation-tab.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  opacity: 1;
+}
+
+.conversation-tab:hover {
+  background: #111827;
+}
+
 .chat-main {
   flex: 1;
   padding: 12px;
   overflow-y: auto;
+}
+
+.chat-main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-main::-webkit-scrollbar {
+  display: none;
 }
 
 .messages {
@@ -316,6 +366,15 @@ body {
   flex-direction: column;
   font-size: 0.85rem;
   overflow-y: auto;
+}
+
+.admin-panel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-panel::-webkit-scrollbar {
+  display: none;
 }
 
 .admin-layout {

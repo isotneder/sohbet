@@ -1,8 +1,6 @@
 // Tüm sohbet kodunu tek kez çalıştırmak için koruma
 (function () {
-  if (window.__CHAT_APP_INIT) {
-    return;
-  }
+  if (window.__CHAT_APP_INIT) return;
   window.__CHAT_APP_INIT = true;
 
   // Firebase config (senin projen)
@@ -19,18 +17,27 @@
   // Diğer scriptler için
   window._db = db;
 
-  // Sayfa isimleri (user1 / user2 / ...)
+  // Sayfa bilgileri (user1 / user2 / ...)
   const myNameFromPage = window.MY_NAME || null;
   const peerNameFromPage = window.PEER_NAME || null;
-  const otherName = peerNameFromPage || null;
   const userKey = window.USER_KEY || null; // "user1", "user2" ...
+  const isHubUser = userKey === "user1";
 
-  // Şifre gerekli mi?
-  function canUseChat() {
-    if (window.REQUIRE_LOGIN) {
-      return !!window.__CHAT_AUTH_OK;
-    }
-    return true;
+  const userDisplayNames = {
+    user1: "User 1",
+    user2: "User 2",
+    user3: "User 3",
+    user4: "User 4",
+    user5: "User 5",
+    user6: "User 6",
+    user7: "User 7",
+    user8: "User 8",
+    user9: "User 9",
+    user10: "User 10",
+  };
+
+  function getUserDisplayName(key) {
+    return userDisplayNames[key] || key;
   }
 
   // DOM
@@ -48,22 +55,30 @@
   const viewerImage = document.getElementById("viewerImage");
   const viewerCountdown = document.getElementById("viewerCountdown");
   const viewerClose = document.getElementById("viewerClose");
-  let viewerTimer = null;
 
+  let viewerTimer = null;
   let isUploadingImage = false;
   let lastSentText = "";
   let lastSentTime = 0;
 
-  // Başlıkta karşı tarafın adı
-  if (headerTitle) {
-    headerTitle.textContent = peerNameFromPage || "Netlify + Firebase Sohbet";
+  let currentRoomId = null;
+  let messagesRef = null;
+  let typingRef = null;
+  let typingTimeout = null;
+
+  // Şifre zorunlu mu?
+  function canUseChat() {
+    if (window.REQUIRE_LOGIN) {
+      return !!window.__CHAT_AUTH_OK;
+    }
+    return true;
   }
 
   // İsim belirleme
   const savedName = localStorage.getItem("chatName");
   let myName = myNameFromPage || savedName || "Anonim";
 
-  if (nameInput) {
+  if (nameInput && !myNameFromPage) {
     nameInput.value = myName;
   }
 
@@ -80,6 +95,40 @@
     return myName;
   }
 
+  // Başlıktaki karşı taraf ismi
+  if (headerTitle && !isHubUser) {
+    headerTitle.textContent =
+      peerNameFromPage || headerTitle.textContent || "Netlify + Firebase Sohbet";
+  }
+
+  function getDefaultRoomId() {
+    if (isHubUser) {
+      return "user2"; // User1 için varsayılan sohbet
+    }
+    if (userKey) {
+      return userKey; // Her user kendi odası
+    }
+    return "public"; // index.html için genel oda
+  }
+
+  function getRoomMessagesRef(roomId) {
+    const id = roomId || currentRoomId || getDefaultRoomId();
+    return db.ref("conversations").child(id).child("messages");
+  }
+
+  function getRoomTypingRef(roomId) {
+    const id = roomId || currentRoomId || getDefaultRoomId();
+    return db.ref("conversations").child(id).child("typing");
+  }
+
+  function getOtherParticipantName() {
+    if (isHubUser) {
+      if (!currentRoomId) return null;
+      return getUserDisplayName(currentRoomId);
+    }
+    return peerNameFromPage || null;
+  }
+
   // METİN MESAJ GÖNDERME
   function sendMessage() {
     if (!messageInput) return;
@@ -94,15 +143,16 @@
 
     const now = Date.now();
     if (text === lastSentText && now - lastSentTime < 400) {
-      // çok hızlı art arda aynı mesajı engelle
+      // Çok hızlı art arda aynı mesajı engelle
       return;
     }
     lastSentText = text;
     lastSentTime = now;
 
-    const expiresAt = now + 10 * 60 * 1000; // 10 dakika sonra sil
+    const expiresAt = now + 10 * 60 * 1000; // 10 dakika sonra otomatik sil
 
-    db.ref("messages").push({
+    getRoomMessagesRef().push({
+      fromKey: userKey || "anon",
       name,
       text,
       timestamp: now,
@@ -176,7 +226,7 @@
 
     const maxFileSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxFileSize) {
-      alert("Fotoğraf çok büyük (max 20MB).");
+      alert("Fotoğraf çok büyük (maksimum 20MB).");
       return;
     }
 
@@ -184,11 +234,12 @@
     if (imageButton) imageButton.disabled = true;
 
     const now = Date.now();
-    const expiresAt = now + 10 * 60 * 1000; // 10 dakika sonra sil
+    const expiresAt = now + 10 * 60 * 1000; // 10 dakika
 
     resizeImageToDataUrl(file)
       .then((dataUrl) => {
-        return db.ref("messages").push({
+        return getRoomMessagesRef().push({
+          fromKey: userKey || "anon",
           name,
           imageData: dataUrl,
           timestamp: now,
@@ -197,7 +248,7 @@
       })
       .catch((err) => {
         console.error(err);
-        alert("Fotoğraf hazırlanırken hata oluştu.");
+        alert("Fotoğraf hazırlanırken bir hata oluştu.");
       })
       .finally(() => {
         isUploadingImage = false;
@@ -220,11 +271,9 @@
   }
 
   // Yazıyor durumu
-  const typingRef = db.ref("typing");
-  let typingTimeout = null;
-
   function setTyping(isTyping) {
     if (!canUseChat()) return;
+    if (!typingRef) return;
     const name = getCurrentName();
     const key = myNameFromPage || name;
     if (!key) return;
@@ -242,23 +291,27 @@
     messageInput.addEventListener("blur", () => setTyping(false));
   }
 
-  typingRef.on("value", (snapshot) => {
-    const currentName = getCurrentName();
-    let otherTypingName = null;
+  function attachTypingListener() {
+    if (!typingRef) return;
 
-    snapshot.forEach((child) => {
-      const name = child.key;
-      const isTyping = child.val();
-      if (isTyping && name !== currentName) {
-        otherTypingName = name;
-      }
+    typingRef.on("value", (snapshot) => {
+      const currentName = getCurrentName();
+      let otherTypingName = null;
+
+      snapshot.forEach((child) => {
+        const name = child.key;
+        const isTyping = child.val();
+        if (isTyping && name !== currentName) {
+          otherTypingName = name;
+        }
+      });
+
+      if (!typingIndicator) return;
+      typingIndicator.textContent = otherTypingName
+        ? `${otherTypingName} yazıyor...`
+        : "";
     });
-
-    if (!typingIndicator) return;
-    typingIndicator.textContent = otherTypingName
-      ? `${otherTypingName} yazıyor...`
-      : "";
-  });
+  }
 
   // Fotoğraf görüntüleme (tek görünmelik, 10 saniye)
   function closeViewer() {
@@ -271,7 +324,7 @@
     }
   }
 
-  function openViewer(messageKey, imageSrc, viewerKey, buttonEl) {
+  function openViewer(messageKey, imageSrc) {
     if (!viewerOverlay || !viewerImage) return;
 
     viewerImage.src = imageSrc;
@@ -280,25 +333,12 @@
     let remaining = 10;
     if (viewerCountdown) viewerCountdown.textContent = `Kalan: ${remaining} sn`;
 
-    if (viewerKey && messageKey) {
-      db
-        .ref("messages")
-        .child(messageKey)
-        .child("seenBy")
-        .child(viewerKey)
-        .set(true);
-    }
-
-    // Fotoğraf açıldıktan 10 saniye sonra tamamen sil
+    // 10 saniye sonra mesajı tamamen sil
     if (messageKey) {
+      const root = getRoomMessagesRef();
       setTimeout(() => {
-        db.ref("messages").child(messageKey).remove();
+        root.child(messageKey).remove();
       }, 10000);
-    }
-
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      buttonEl.textContent = "Fotoğraf süresi doldu";
     }
 
     if (viewerTimer) {
@@ -307,9 +347,9 @@
 
     viewerTimer = setInterval(() => {
       remaining -= 1;
-      if (viewerCountdown)
+      if (viewerCountdown) {
         viewerCountdown.textContent = `Kalan: ${remaining} sn`;
-
+      }
       if (remaining <= 0) {
         closeViewer();
       }
@@ -330,35 +370,19 @@
     });
   }
 
-  // Mesajlar + görüldü durumları
-  const messagesRef = db
-    .ref("messages")
-    .orderByChild("timestamp")
-    .limitToLast(100);
-
+  // Mesajlar
   function renderMessage(key, msg) {
+    if (!messagesDiv) return;
+
     const currentName = getCurrentName();
-    const viewerKey = myNameFromPage || currentName;
-    const isMe = msg.name === currentName;
+    const isMe =
+      msg.fromKey === userKey ||
+      (!msg.fromKey && msg.name && msg.name === currentName);
+
     const now = Date.now();
-
-    // Süresi geçmiş mesajları sil (10 dk)
     if (msg.expiresAt && msg.expiresAt <= now) {
-      db.ref("messages").child(key).remove();
+      getRoomMessagesRef().child(key).remove();
       return;
-    }
-
-    // Karşıdan gelen mesajları okundu işaretle (readBy)
-    if (!isMe && viewerKey) {
-      const readBy = msg.readBy || {};
-      if (!readBy[viewerKey]) {
-        db
-          .ref("messages")
-          .child(key)
-          .child("readBy")
-          .child(viewerKey)
-          .set(true);
-      }
     }
 
     let messageEl = document.getElementById(`msg-${key}`);
@@ -380,51 +404,25 @@
       hour: "2-digit",
       minute: "2-digit",
     });
-    metaEl.textContent = `${msg.name} • ${timeStr}`;
+    metaEl.textContent = `${msg.name || "Bilinmeyen"} · ${timeStr}`;
 
     const contentEl = document.createElement("div");
 
-    const imageSrc = msg.imageData || msg.imageUrl || null;
-    const seenBy = msg.seenBy || {};
-    const alreadySeenPhoto = viewerKey && seenBy[viewerKey];
-
-    if (imageSrc && !alreadySeenPhoto) {
+    if (msg.imageData) {
       const button = document.createElement("button");
       button.classList.add("view-image-button");
       button.textContent = "Fotoğrafı gör (10 sn)";
       button.addEventListener("click", () => {
-        openViewer(key, imageSrc, viewerKey, button);
+        button.disabled = true;
+        openViewer(key, msg.imageData);
       });
       contentEl.appendChild(button);
-    } else if (imageSrc && alreadySeenPhoto) {
-      const openedEl = document.createElement("div");
-      openedEl.classList.add("view-image-opened");
-      openedEl.textContent = "Açıldı";
-      contentEl.appendChild(openedEl);
     }
 
     if (msg.text) {
       const textEl = document.createElement("div");
       textEl.textContent = msg.text;
       contentEl.appendChild(textEl);
-    }
-
-    // Sadece kendi gönderdiğimiz mesajlara tik ekle
-    if (isMe) {
-      const statusSpan = document.createElement("span");
-      statusSpan.classList.add("message-status");
-
-      let statusText = "✓";
-      let statusClass = "sent";
-
-      if (otherName && msg.readBy && msg.readBy[otherName]) {
-        statusText = "✓✓";
-        statusClass = "seen";
-      }
-
-      statusSpan.textContent = statusText;
-      statusSpan.classList.add(statusClass);
-      metaEl.appendChild(statusSpan);
     }
 
     messageEl.innerHTML = "";
@@ -436,20 +434,105 @@
     }
   }
 
-  messagesRef.on("child_added", (snapshot) => {
-    renderMessage(snapshot.key, snapshot.val());
-  });
+  function attachMessagesListener() {
+    if (!messagesRef || !messagesDiv) return;
 
-  messagesRef.on("child_changed", (snapshot) => {
-    renderMessage(snapshot.key, snapshot.val());
-  });
+    messagesRef.on("child_added", (snapshot) => {
+      renderMessage(snapshot.key, snapshot.val());
+    });
 
-  messagesRef.on("child_removed", (snapshot) => {
-    const el = document.getElementById(`msg-${snapshot.key}`);
-    if (el && el.parentNode) {
-      el.parentNode.removeChild(el);
+    messagesRef.on("child_changed", (snapshot) => {
+      renderMessage(snapshot.key, snapshot.val());
+    });
+
+    messagesRef.on("child_removed", (snapshot) => {
+      const el = document.getElementById(`msg-${snapshot.key}`);
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+    });
+  }
+
+  // Oda değiştirme (User1 için farklı kullanıcılarla sohbet geçişi)
+  function switchRoom(roomId) {
+    const targetRoomId = roomId || getDefaultRoomId();
+    if (currentRoomId === targetRoomId && messagesRef) return;
+
+    const prevMessagesRef = messagesRef;
+    const prevTypingRef = typingRef;
+
+    currentRoomId = targetRoomId;
+    messagesRef = getRoomMessagesRef(targetRoomId)
+      .orderByChild("timestamp")
+      .limitToLast(100);
+    typingRef = getRoomTypingRef(targetRoomId);
+
+    if (prevMessagesRef) prevMessagesRef.off();
+    if (prevTypingRef) prevTypingRef.off();
+
+    if (messagesDiv) {
+      messagesDiv.innerHTML = "";
     }
-  });
+    if (typingIndicator) {
+      typingIndicator.textContent = "";
+    }
+
+    if (headerTitle && isHubUser) {
+      headerTitle.textContent = getUserDisplayName(targetRoomId);
+    }
+
+    attachMessagesListener();
+    attachTypingListener();
+  }
+
+  // User1 arayüzünde sohbet sekmeleri
+  function initConversationTabs() {
+    const container = document.getElementById("conversationTabs");
+    if (!container) {
+      switchRoom(getDefaultRoomId());
+      return;
+    }
+
+    const buttons = Array.from(
+      container.querySelectorAll(".conversation-tab")
+    );
+
+    let initialRoomId = null;
+
+    buttons.forEach((btn) => {
+      const roomId = btn.getAttribute("data-room");
+      if (!roomId) return;
+      if (!initialRoomId && btn.classList.contains("active")) {
+        initialRoomId = roomId;
+      }
+
+      btn.addEventListener("click", () => {
+        if (roomId === currentRoomId) return;
+        buttons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        switchRoom(roomId);
+      });
+    });
+
+    // Mouse tekerleğiyle yatay kaydırma
+    container.addEventListener(
+      "wheel",
+      (e) => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          container.scrollLeft += e.deltaY;
+        }
+      },
+      { passive: false }
+    );
+
+    if (!initialRoomId && buttons.length > 0) {
+      initialRoomId = buttons[0].getAttribute("data-room");
+      buttons[0].classList.add("active");
+    }
+
+    switchRoom(initialRoomId || getDefaultRoomId());
+  }
 
   // Giriş overlay'i (şifre)
   function initLoginOverlay() {
@@ -484,7 +567,8 @@
       const value = (passwordInput && passwordInput.value.trim()) || "";
       if (!currentPassword) {
         if (loginError) {
-          loginError.textContent = "Bu kullanıcı için şifre ayarlanmamış.";
+          loginError.textContent =
+            "Bu kullanıcı için şifre ayarlanmamış.";
         }
         return;
       }
@@ -513,7 +597,7 @@
     }
   }
 
-  // User 1 tarafında şifre ayarlama paneli
+  // User 1 tarafında şifre ayar paneli
   function initAdminPanel() {
     const panel = document.getElementById("adminPanel");
     if (!panel) return;
@@ -527,6 +611,14 @@
       const labelEl = row.querySelector(".admin-user-label");
 
       if (!key || !input || !button) return;
+
+       // Mevcut şifreyi input içinde göster
+       db.ref("passwords")
+         .child(key)
+         .on("value", (snap) => {
+           const current = snap.val();
+           input.value = current || "";
+         });
 
       button.addEventListener("click", () => {
         const value = input.value.trim();
@@ -548,7 +640,13 @@
     });
   }
 
+  // Başlat
   initLoginOverlay();
   initAdminPanel();
-})();
 
+  if (isHubUser) {
+    initConversationTabs();
+  } else {
+    switchRoom(getDefaultRoomId());
+  }
+})();
