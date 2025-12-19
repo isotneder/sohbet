@@ -1,14 +1,21 @@
-// Firebase config (senin projen)
-const firebaseConfig = {
-  apiKey: "AIzaSyAG__4nFoAWy368EFicS9N108IkaBAwe2s",
-  authDomain: "sohbet-b417a.firebaseapp.com",
-  databaseURL:
-    "https://sohbet-b417a-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "sohbet-b417a",
-};
+// Tüm sohbet kodunu tek kez ÇalÝstÝrmak için koruma
+(function () {
+  if (window.__CHAT_APP_INIT) {
+    return;
+  }
+  window.__CHAT_APP_INIT = true;
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  // Firebase config (senin projen)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAG__4nFoAWy368EFicS9N108IkaBAwe2s",
+    authDomain: "sohbet-b417a.firebaseapp.com",
+    databaseURL:
+      "https://sohbet-b417a-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "sohbet-b417a",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
 // Sabit isimler (user1 / user2 sayfalarından gelebilir)
 const myNameFromPage = window.MY_NAME || null;
@@ -31,6 +38,7 @@ const viewerImage = document.getElementById("viewerImage");
 const viewerCountdown = document.getElementById("viewerCountdown");
 const viewerClose = document.getElementById("viewerClose");
 let viewerTimer = null;
+
 let isUploadingImage = false;
 let lastSentText = "";
 let lastSentTime = 0;
@@ -67,7 +75,6 @@ function sendMessage() {
   const text = messageInput.value.trim();
   if (!text) return;
 
-  // Aynı mesajı çok kısa sürede iki kez göndermeyi engelle
   const now = Date.now();
   if (text === lastSentText && now - lastSentTime < 400) {
     return;
@@ -78,7 +85,7 @@ function sendMessage() {
   db.ref("messages").push({
     name,
     text,
-    timestamp: Date.now(),
+    timestamp: now,
   });
 
   messageInput.value = "";
@@ -149,12 +156,14 @@ function sendImage(file) {
   isUploadingImage = true;
   if (imageButton) imageButton.disabled = true;
 
+  const now = Date.now();
+
   resizeImageToDataUrl(file)
     .then((dataUrl) => {
       return db.ref("messages").push({
         name,
         imageData: dataUrl,
-        timestamp: Date.now(),
+        timestamp: now,
       });
     })
     .catch((err) => {
@@ -241,7 +250,6 @@ function openViewer(messageKey, imageSrc, viewerKey, buttonEl) {
   let remaining = 10;
   if (viewerCountdown) viewerCountdown.textContent = `Kalan: ${remaining} sn`;
 
-  // Tek görünmelik: açar açmaz seenBy işaretle ve butonu kapat
   if (viewerKey && messageKey) {
     db.ref("messages").child(messageKey).child("seenBy").child(viewerKey).set(true);
   }
@@ -278,107 +286,101 @@ if (viewerClose) {
   });
 }
 
-// Mesajları dinle + görüldü durumları
-db.ref("messages")
-  .orderByChild("timestamp")
-  .limitToLast(100)
-  .on("value", (snapshot) => {
-    const currentName = getCurrentName();
-    const viewerKey = myNameFromPage || currentName;
-    messagesDiv.innerHTML = "";
+// Mesajları dinle + görüldü durumları (child_added / child_changed)
+const messagesRef = db.ref("messages").orderByChild("timestamp").limitToLast(100);
 
-    const seenSignatures = new Set();
+function renderMessage(key, msg) {
+  const currentName = getCurrentName();
+  const viewerKey = myNameFromPage || currentName;
+  const isMe = msg.name === currentName;
 
-    snapshot.forEach((child) => {
-      const msg = child.val();
-      const isMe = msg.name === currentName;
+  // Karşıdan gelen metin/mesajları okundu işaretle (readBy)
+  if (!isMe && viewerKey) {
+    const readBy = msg.readBy || {};
+    if (!readBy[viewerKey]) {
+      db.ref("messages").child(key).child("readBy").child(viewerKey).set(true);
+    }
+  }
 
-      const signature = [
-        msg.name || "",
-        msg.timestamp || "",
-        msg.text || "",
-        msg.imageData ? msg.imageData.slice(0, 20) : "",
-      ].join("|");
+  let messageEl = document.getElementById(`msg-${key}`);
+  const isNew = !messageEl;
 
-      if (seenSignatures.has(signature)) {
-        return;
-      }
-      seenSignatures.add(signature);
+  if (!messageEl) {
+    messageEl = document.createElement("div");
+    messageEl.id = `msg-${key}`;
+    messagesDiv.appendChild(messageEl);
+  }
 
-      // Karşıdan gelen metin/mesajları okundu işaretle (readBy)
-      if (!isMe && viewerKey) {
-        const readBy = msg.readBy || {};
-        if (!readBy[viewerKey]) {
-          db.ref("messages")
-            .child(child.key)
-            .child("readBy")
-            .child(viewerKey)
-            .set(true);
-        }
-      }
+  messageEl.className = "message";
+  messageEl.classList.add(isMe ? "me" : "other");
 
-      const messageEl = document.createElement("div");
-      messageEl.classList.add("message");
-      messageEl.classList.add(isMe ? "me" : "other");
-
-      const metaEl = document.createElement("div");
-      metaEl.classList.add("message-meta");
-      const date = new Date(msg.timestamp || Date.now());
-      const timeStr = date.toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      metaEl.textContent = `${msg.name} • ${timeStr}`;
-
-      const contentEl = document.createElement("div");
-
-      const imageSrc = msg.imageData || msg.imageUrl || null;
-      const seenBy = msg.seenBy || {};
-      const alreadySeenPhoto = viewerKey && seenBy[viewerKey];
-
-      // Fotoğraf: hiç açılmadıysa "Fotoğrafı gör" butonu göster
-      if (imageSrc && !alreadySeenPhoto) {
-        const button = document.createElement("button");
-        button.classList.add("view-image-button");
-        button.textContent = "Fotoğrafı gör (10 sn)";
-        button.addEventListener("click", () => {
-          openViewer(child.key, imageSrc, viewerKey, button);
-        });
-        contentEl.appendChild(button);
-      } else if (imageSrc && alreadySeenPhoto) {
-        const openedEl = document.createElement("div");
-        openedEl.classList.add("view-image-opened");
-        openedEl.textContent = "Açıldı";
-        contentEl.appendChild(openedEl);
-      }
-
-      if (msg.text) {
-        const textEl = document.createElement("div");
-        textEl.textContent = msg.text;
-        contentEl.appendChild(textEl);
-      }
-
-      // Görüldü durumu (sadece benim mesajlarım için tikler)
-      if (isMe) {
-        const statusSpan = document.createElement("span");
-        statusSpan.classList.add("message-status");
-
-        let statusText = "✓"; // gönderildi
-        let statusClass = "sent";
-
-        if (otherName && msg.readBy && msg.readBy[otherName]) {
-          statusText = "✓✓";
-          statusClass = "seen";
-        }
-
-        statusSpan.textContent = statusText;
-        statusSpan.classList.add(statusClass);
-        metaEl.appendChild(statusSpan);
-      }
-
-      messageEl.appendChild(metaEl);
-      messageEl.appendChild(contentEl);
-      messagesDiv.appendChild(messageEl);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
+  const metaEl = document.createElement("div");
+  metaEl.classList.add("message-meta");
+  const date = new Date(msg.timestamp || Date.now());
+  const timeStr = date.toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
+  metaEl.textContent = `${msg.name} • ${timeStr}`;
+
+  const contentEl = document.createElement("div");
+
+  const imageSrc = msg.imageData || msg.imageUrl || null;
+  const seenBy = msg.seenBy || {};
+  const alreadySeenPhoto = viewerKey && seenBy[viewerKey];
+
+  if (imageSrc && !alreadySeenPhoto) {
+    const button = document.createElement("button");
+    button.classList.add("view-image-button");
+    button.textContent = "Fotoğrafı gör (10 sn)";
+    button.addEventListener("click", () => {
+      openViewer(key, imageSrc, viewerKey, button);
+    });
+    contentEl.appendChild(button);
+  } else if (imageSrc && alreadySeenPhoto) {
+    const openedEl = document.createElement("div");
+    openedEl.classList.add("view-image-opened");
+    openedEl.textContent = "Açıldı";
+    contentEl.appendChild(openedEl);
+  }
+
+  if (msg.text) {
+    const textEl = document.createElement("div");
+    textEl.textContent = msg.text;
+    contentEl.appendChild(textEl);
+  }
+
+  if (isMe) {
+    const statusSpan = document.createElement("span");
+    statusSpan.classList.add("message-status");
+
+    let statusText = "✓";
+    let statusClass = "sent";
+
+    if (otherName && msg.readBy && msg.readBy[otherName]) {
+      statusText = "✓✓";
+      statusClass = "seen";
+    }
+
+    statusSpan.textContent = statusText;
+    statusSpan.classList.add(statusClass);
+    metaEl.appendChild(statusSpan);
+  }
+
+  messageEl.innerHTML = "";
+  messageEl.appendChild(metaEl);
+  messageEl.appendChild(contentEl);
+
+  if (isNew) {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+}
+
+  messagesRef.on("child_added", (snapshot) => {
+    renderMessage(snapshot.key, snapshot.val());
+  });
+
+  messagesRef.on("child_changed", (snapshot) => {
+    renderMessage(snapshot.key, snapshot.val());
+  });
+})();
