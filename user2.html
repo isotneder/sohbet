@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sohbet</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="chat-container">
+      <header class="chat-header">
+        <h1></h1>
+      </header>
+
+      <main class="chat-main">
+        <div id="messages" class="messages"></div>
+      </main>
+
+      <footer class="chat-footer">
+        <input
+          id="messageInput"
+          type="text"
+          placeholder="Mesaj yaz..."
+          autocomplete="off"
+        />
+        <button id="sendButton">Gönder</button>
+      </footer>
+    </div>
+
+    <!-- Bu sayfa için sabit isimler -->
+    <script>
+      // Bu sayfayı kullanacak kişinin adı
+      window.MY_NAME = "Sude";
+      // Karşı taraftaki kişinin adı
+      window.PEER_NAME = "İsa";
+    </script>
+
+    <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <!-- Uygulama kodu -->
+    <script src="app.js"></script>
+  </body>
+</html>
+
