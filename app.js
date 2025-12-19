@@ -1,27 +1,20 @@
-// Firebase ayarların (senin projene göre)
+// Firebase config (senin projen)
 const firebaseConfig = {
   apiKey: "AIzaSyAG__4nFoAWy368EFicS9N108IkaBAwe2s",
   authDomain: "sohbet-b417a.firebaseapp.com",
   databaseURL:
     "https://sohbet-b417a-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "sohbet-b417a",
-  storageBucket: "sohbet-b417a.firebasestorage.app",
-  messagingSenderId: "952601187294",
-  appId: "1:952601187294:web:e58302a19531645a2cc34f",
 };
 
-// Firebase'i başlat
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const storage = firebase.storage();
 
-// Sayfadan gelen sabit isimler (user1.html / user2.html)
-// MY_NAME: bu sayfadaki kişi
-// PEER_NAME: konuştuğun kişi
+// Sabit isimler (user1 / user2 sayfalarından gelebilir)
 const myNameFromPage = window.MY_NAME || null;
 const peerNameFromPage = window.PEER_NAME || null;
 
-// DOM elementleri
+// DOM
 const nameInput = document.getElementById("nameInput");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
@@ -31,28 +24,21 @@ const messagesDiv = document.getElementById("messages");
 const typingIndicator = document.getElementById("typingIndicator");
 const headerTitle = document.querySelector(".chat-header h1");
 
-// Başlık: DM gibi, üstte karşı tarafın adı
+// Başlıkta karşı tarafın adı
 if (headerTitle) {
-  if (peerNameFromPage) {
-    headerTitle.textContent = peerNameFromPage;
-  } else {
-    headerTitle.textContent = "Netlify + Firebase Sohbet";
-  }
+  headerTitle.textContent = peerNameFromPage || "Netlify + Firebase Sohbet";
 }
 
 // İsim belirleme
 const savedName = localStorage.getItem("chatName");
 let myName = myNameFromPage || savedName || "Anonim";
 
-// index.html'de isim alanı varsa doldur, DM sayfalarında olmayabilir
 if (nameInput) {
   nameInput.value = myName;
 }
 
 function getCurrentName() {
-  if (myNameFromPage) {
-    return myNameFromPage;
-  }
+  if (myNameFromPage) return myNameFromPage;
   if (nameInput) {
     const value = nameInput.value.trim();
     if (value) {
@@ -64,14 +50,13 @@ function getCurrentName() {
   return myName;
 }
 
-// Metin mesaj gönder
+// Metin mesaj
 function sendMessage() {
   const name = getCurrentName();
   const text = messageInput.value.trim();
   if (!text) return;
 
-  const msgRef = db.ref("messages").push();
-  msgRef.set({
+  db.ref("messages").push({
     name,
     text,
     timestamp: Date.now(),
@@ -81,43 +66,41 @@ function sendMessage() {
   setTyping(false);
 }
 
-sendButton.addEventListener("click", sendMessage);
-messageInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+if (sendButton) {
+  sendButton.addEventListener("click", sendMessage);
+}
 
-// Fotoğraf seç ve yükle
+if (messageInput) {
+  messageInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+}
+
+// Fotoğrafı base64 olarak DB'ye kaydet (Storage kullanmıyoruz)
 function sendImage(file) {
   const name = getCurrentName();
   if (!file) return;
 
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 2 * 1024 * 1024; // 2MB
   if (file.size > maxSize) {
-    alert("Fotoğraf çok büyük (max 5MB).");
+    alert("Fotoğraf çok büyük (max 2MB).");
     return;
   }
 
-  const path = `images/${Date.now()}_${file.name}`;
-  const ref = storage.ref(path);
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
 
-  ref
-    .put(file)
-    .then((snapshot) => snapshot.ref.getDownloadURL())
-    .then((url) => {
-      const msgRef = db.ref("messages").push();
-      return msgRef.set({
-        name,
-        imageUrl: url,
-        timestamp: Date.now(),
-      });
-    })
-    .catch((err) => {
-      console.error(err);
-      alert("Fotoğraf yüklenirken hata oluştu.");
+    db.ref("messages").push({
+      name,
+      imageData: dataUrl,
+      timestamp: Date.now(),
     });
+  };
+  reader.readAsDataURL(file);
 }
 
 if (imageButton && imageInput) {
@@ -148,7 +131,7 @@ function setTyping(isTyping) {
 function handleTyping() {
   setTyping(true);
   if (typingTimeout) clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => setTyping(false), 2000);
+  typingTimeout = setTimeout(() => setTyping(false), 1500);
 }
 
 if (messageInput) {
@@ -156,7 +139,6 @@ if (messageInput) {
   messageInput.addEventListener("blur", () => setTyping(false));
 }
 
-// Diğer kişinin yazıyor bilgisini dinle
 typingRef.on("value", (snapshot) => {
   const currentName = getCurrentName();
   let otherTypingName = null;
@@ -170,15 +152,12 @@ typingRef.on("value", (snapshot) => {
   });
 
   if (!typingIndicator) return;
-
-  if (otherTypingName) {
-    typingIndicator.textContent = `${otherTypingName} yazıyor...`;
-  } else {
-    typingIndicator.textContent = "";
-  }
+  typingIndicator.textContent = otherTypingName
+    ? `${otherTypingName} yazıyor...`
+    : "";
 });
 
-// Mesajları gerçek zamanlı dinle
+// Mesajları dinle
 db.ref("messages")
   .orderByChild("timestamp")
   .limitToLast(100)
@@ -205,10 +184,10 @@ db.ref("messages")
 
       const contentEl = document.createElement("div");
 
-      if (msg.imageUrl) {
+      if (msg.imageData) {
         const imgEl = document.createElement("img");
-        imgEl.src = msg.imageUrl;
-        imgEl.alt = "Gönderilen fotoğraf";
+        imgEl.src = msg.imageData;
+        imgEl.alt = "Fotoğraf";
         imgEl.classList.add("message-image");
         contentEl.appendChild(imgEl);
       }
