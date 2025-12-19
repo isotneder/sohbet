@@ -8,7 +8,21 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="chat-container">
+    <div id="loginOverlay" class="login-overlay">
+      <div class="login-box">
+        <h2>Giriş</h2>
+        <input
+          type="password"
+          id="passwordInput"
+          placeholder="Şifre"
+          autocomplete="off"
+        />
+        <button id="loginButton">Giriş yap</button>
+        <div id="loginError" class="login-error"></div>
+      </div>
+    </div>
+
+    <div class="chat-container hidden-chat">
       <header class="chat-header">
         <img src="logo.png" alt="Logo" class="logo" />
         <h1></h1>
@@ -20,7 +34,7 @@
       </main>
 
       <footer class="chat-footer">
-        <button id="imageButton" class="icon-button">📷</button>
+        <button id="imageButton" class="icon-button">🖼</button>
         <input
           id="imageInput"
           type="file"
@@ -49,6 +63,44 @@
     <script>
       window.MY_NAME = "User 2";
       window.PEER_NAME = "User 1";
+      // User 2 (misafir) için giriş şifresi – burayı kendine göre değiştir
+      window.CHAT_PASSWORD = "1234";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const overlay = document.getElementById("loginOverlay");
+        const chat = document.querySelector(".chat-container");
+        const passwordInput = document.getElementById("passwordInput");
+        const loginButton = document.getElementById("loginButton");
+        const loginError = document.getElementById("loginError");
+
+        // Oturumda daha önce doğrulandıysa tekrar şifre isteme
+        if (sessionStorage.getItem("chatAuthOk") === "true") {
+          window.__CHAT_AUTH_OK = true;
+          overlay.style.display = "none";
+          chat.classList.remove("hidden-chat");
+          return;
+        }
+
+        function tryLogin() {
+          const value = passwordInput.value.trim();
+          if (value === window.CHAT_PASSWORD) {
+            window.__CHAT_AUTH_OK = true;
+            sessionStorage.setItem("chatAuthOk", "true");
+            overlay.style.display = "none";
+            chat.classList.remove("hidden-chat");
+          } else {
+            loginError.textContent = "Şifre yanlış.";
+          }
+        }
+
+        loginButton.addEventListener("click", tryLogin);
+        passwordInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            tryLogin();
+          }
+        });
+      });
     </script>
 
     <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
@@ -59,3 +111,4 @@
     <script src="app.js"></script>
   </body>
 </html>
+
