@@ -82,10 +82,13 @@ function sendMessage() {
   lastSentText = text;
   lastSentTime = now;
 
+  const expiresAt = now + 10 * 60 * 1000; // 10 dakika sonra sil
+
   db.ref("messages").push({
     name,
     text,
     timestamp: now,
+    expiresAt,
   });
 
   messageInput.value = "";
@@ -157,6 +160,7 @@ function sendImage(file) {
   if (imageButton) imageButton.disabled = true;
 
   const now = Date.now();
+  const expiresAt = now + 10 * 60 * 1000; // 10 dakika sonra sil
 
   resizeImageToDataUrl(file)
     .then((dataUrl) => {
@@ -164,6 +168,7 @@ function sendImage(file) {
         name,
         imageData: dataUrl,
         timestamp: now,
+        expiresAt,
       });
     })
     .catch((err) => {
@@ -251,7 +256,19 @@ function openViewer(messageKey, imageSrc, viewerKey, buttonEl) {
   if (viewerCountdown) viewerCountdown.textContent = `Kalan: ${remaining} sn`;
 
   if (viewerKey && messageKey) {
-    db.ref("messages").child(messageKey).child("seenBy").child(viewerKey).set(true);
+    db
+      .ref("messages")
+      .child(messageKey)
+      .child("seenBy")
+      .child(viewerKey)
+      .set(true);
+  }
+
+  // Fotoğraf açıldıktan 10 saniye sonra tamamen sil
+  if (messageKey) {
+    setTimeout(() => {
+      db.ref("messages").child(messageKey).remove();
+    }, 10000);
   }
   if (buttonEl) {
     buttonEl.disabled = true;
@@ -293,6 +310,13 @@ function renderMessage(key, msg) {
   const currentName = getCurrentName();
   const viewerKey = myNameFromPage || currentName;
   const isMe = msg.name === currentName;
+  const now = Date.now();
+
+  // Süresi geçmiş mesajları sil (10 dk)
+  if (msg.expiresAt && msg.expiresAt <= now) {
+    db.ref("messages").child(key).remove();
+    return;
+  }
 
   // Karşıdan gelen metin/mesajları okundu işaretle (readBy)
   if (!isMe && viewerKey) {
@@ -380,7 +404,14 @@ function renderMessage(key, msg) {
     renderMessage(snapshot.key, snapshot.val());
   });
 
-  messagesRef.on("child_changed", (snapshot) => {
-    renderMessage(snapshot.key, snapshot.val());
-  });
+messagesRef.on("child_changed", (snapshot) => {
+  renderMessage(snapshot.key, snapshot.val());
+});
+
+messagesRef.on("child_removed", (snapshot) => {
+  const el = document.getElementById(`msg-${snapshot.key}`);
+  if (el && el.parentNode) {
+    el.parentNode.removeChild(el);
+  }
+});
 })();
