@@ -13,6 +13,7 @@ const db = firebase.database();
 // Sabit isimler (user1 / user2 sayfalarından gelebilir)
 const myNameFromPage = window.MY_NAME || null;
 const peerNameFromPage = window.PEER_NAME || null;
+const otherName = peerNameFromPage || null;
 
 // DOM
 const nameInput = document.getElementById("nameInput");
@@ -23,6 +24,13 @@ const imageInput = document.getElementById("imageInput");
 const messagesDiv = document.getElementById("messages");
 const typingIndicator = document.getElementById("typingIndicator");
 const headerTitle = document.querySelector(".chat-header h1");
+
+// Fotoğraf görüntüleme overlay
+const viewerOverlay = document.getElementById("viewerOverlay");
+const viewerImage = document.getElementById("viewerImage");
+const viewerCountdown = document.getElementById("viewerCountdown");
+const viewerClose = document.getElementById("viewerClose");
+let viewerTimer = null;
 
 // Başlıkta karşı tarafın adı
 if (headerTitle) {
@@ -93,7 +101,7 @@ function resizeImageToDataUrl(file) {
     img.onload = () => {
       let width = img.width;
       let height = img.height;
-      const maxSize = 900; // max genişlik/yükseklik
+      const maxSize = 900;
 
       if (width > maxSize || height > maxSize) {
         const scale = Math.min(maxSize / width, maxSize / height);
@@ -195,7 +203,64 @@ typingRef.on("value", (snapshot) => {
     : "";
 });
 
-// Mesajları dinle (fotoğraf tek görünmelik)
+// Fotoğraf görüntüleme (tek görünmelik, 10 saniye)
+function closeViewer() {
+  if (viewerOverlay) viewerOverlay.classList.add("hidden");
+  if (viewerImage) viewerImage.src = "";
+  if (viewerCountdown) viewerCountdown.textContent = "";
+  if (viewerTimer) {
+    clearInterval(viewerTimer);
+    viewerTimer = null;
+  }
+}
+
+function openViewer(messageKey, imageSrc, viewerKey, buttonEl) {
+  if (!viewerOverlay || !viewerImage) return;
+
+  viewerImage.src = imageSrc;
+  viewerOverlay.classList.remove("hidden");
+
+  let remaining = 10;
+  if (viewerCountdown) viewerCountdown.textContent = `Kalan: ${remaining} sn`;
+
+  // Tek görünmelik: açar açmaz seenBy işaretle ve butonu kapat
+  if (viewerKey && messageKey) {
+    db.ref("messages").child(messageKey).child("seenBy").child(viewerKey).set(true);
+  }
+  if (buttonEl) {
+    buttonEl.disabled = true;
+    buttonEl.textContent = "Fotoğraf süresi doldu";
+  }
+
+  if (viewerTimer) {
+    clearInterval(viewerTimer);
+  }
+
+  viewerTimer = setInterval(() => {
+    remaining -= 1;
+    if (viewerCountdown) viewerCountdown.textContent = `Kalan: ${remaining} sn`;
+
+    if (remaining <= 0) {
+      closeViewer();
+    }
+  }, 1000);
+}
+
+if (viewerOverlay) {
+  viewerOverlay.addEventListener("click", (e) => {
+    if (e.target === viewerOverlay) {
+      closeViewer();
+    }
+  });
+}
+
+if (viewerClose) {
+  viewerClose.addEventListener("click", () => {
+    closeViewer();
+  });
+}
+
+// Mesajları dinle + görüldü durumları
 db.ref("messages")
   .orderByChild("timestamp")
   .limitToLast(100)
@@ -207,6 +272,18 @@ db.ref("messages")
     snapshot.forEach((child) => {
       const msg = child.val();
       const isMe = msg.name === currentName;
+
+      // Karşıdan gelen metin/mesajları okundu işaretle (readBy)
+      if (!isMe && viewerKey) {
+        const readBy = msg.readBy || {};
+        if (!readBy[viewerKey]) {
+          db.ref("messages")
+            .child(child.key)
+            .child("readBy")
+            .child(viewerKey)
+            .set(true);
+        }
+      }
 
       const messageEl = document.createElement("div");
       messageEl.classList.add("message");
@@ -225,33 +302,41 @@ db.ref("messages")
 
       const imageSrc = msg.imageData || msg.imageUrl || null;
       const seenBy = msg.seenBy || {};
-      const alreadySeen = viewerKey && seenBy[viewerKey];
+      const alreadySeenPhoto = viewerKey && seenBy[viewerKey];
 
-      if (imageSrc && !alreadySeen) {
-        const imgEl = document.createElement("img");
-        imgEl.src = imageSrc;
-        imgEl.alt = "Fotoğraf";
-        imgEl.classList.add("message-image");
-        contentEl.appendChild(imgEl);
-
-        // Bu kullanıcı için tek görünmelik: ilk render'da görüldü say
-        if (viewerKey) {
-          db.ref("messages")
-            .child(child.key)
-            .child("seenBy")
-            .child(viewerKey)
-            .set(true);
-        }
-      } else if (imageSrc && alreadySeen) {
-        const infoEl = document.createElement("div");
-        infoEl.textContent = "Bu fotoğrafı daha önce gördün.";
-        contentEl.appendChild(infoEl);
+      // Fotoğraf: hiç açılmadıysa "Fotoğrafı gör" butonu göster, açılmışsa gizle
+      if (imageSrc && !alreadySeenPhoto) {
+        const button = document.createElement("button");
+        button.classList.add("view-image-button");
+        button.textContent = "Fotoğrafı gör (10 sn)";
+        button.addEventListener("click", () => {
+          openViewer(child.key, imageSrc, viewerKey, button);
+        });
+        contentEl.appendChild(button);
       }
 
       if (msg.text) {
         const textEl = document.createElement("div");
         textEl.textContent = msg.text;
         contentEl.appendChild(textEl);
+      }
+
+      // Görüldü durumu (sadece benim mesajlarım için tikler)
+      if (isMe) {
+        const statusSpan = document.createElement("span");
+        statusSpan.classList.add("message-status");
+
+        let statusText = "✓"; // gönderildi
+        let statusClass = "sent";
+
+        if (otherName && msg.readBy && msg.readBy[otherName]) {
+          statusText = "✓✓";
+          statusClass = "seen";
+        }
+
+        statusSpan.textContent = statusText;
+        statusSpan.classList.add(statusClass);
+        metaEl.appendChild(statusSpan);
       }
 
       messageEl.appendChild(metaEl);

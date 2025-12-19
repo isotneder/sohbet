@@ -14,6 +14,10 @@ body {
   min-height: 100vh;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .chat-container {
   background: #020617;
   border-radius: 12px;
@@ -83,6 +87,20 @@ body {
   margin-bottom: 2px;
 }
 
+.message-status {
+  font-size: 0.75rem;
+  margin-left: 4px;
+  opacity: 0.9;
+}
+
+.message-status.sent {
+  color: #9ca3af;
+}
+
+.message-status.seen {
+  color: #60a5fa;
+}
+
 .chat-footer {
   display: flex;
   gap: 8px;
@@ -140,3 +158,70 @@ body {
   display: block;
 }
 
+.view-image-button {
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: #374151;
+  color: #e5e7eb;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.view-image-button[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.viewer-inner {
+  background: #020617;
+  border-radius: 12px;
+  padding: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: 75vh;
+  border-radius: 8px;
+}
+
+.viewer-countdown {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #e5e7eb;
+}
+
+.viewer-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.viewer-close:hover {
+  background: rgba(31, 41, 55, 0.95);
+}
