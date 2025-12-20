@@ -8,131 +8,278 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- Giriş (şifre) ekranı -->
     <div id="loginOverlay" class="login-overlay">
       <div class="login-box">
-        <h2>GiriŞY</h2>
+        <h2>Giriş</h2>
         <input
           type="password"
           id="passwordInput"
           placeholder="Şifre"
           autocomplete="off"
         />
-        <button id="loginButton">GiriY yap</button>
+        <button id="loginButton">Giriş yap</button>
         <div id="loginError" class="login-error"></div>
       </div>
     </div>
 
     <div class="admin-layout">
+      <!-- Hamburger menü: sohbet geçişleri + şifreler + nick -->
       <aside id="adminPanel" class="admin-panel">
-        <h2>KullanŽñcŽñ Şifreleri</h2>
-
-        <div class="admin-row" data-user="user1">
-          <span class="admin-user-label">İsa</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
+        <div class="admin-panel-header">
+          <h2>Menü</h2>
+          <button
+            type="button"
+            id="menuCloseButton"
+            class="menu-close-button"
+            aria-label="Menüyü kapat"
+          >
+            ×
+          </button>
         </div>
 
-        <div class="admin-row" data-user="user2">
-          <span class="admin-user-label">User 2</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+        <section class="menu-section">
+          <h3 class="menu-section-title">Sohbetler</h3>
+          <div id="conversationTabs" class="conversation-tabs">
+            <button
+              type="button"
+              class="conversation-tab active"
+              data-room="user2"
+            >
+              User 2
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user3"
+            >
+              User 3
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user4"
+            >
+              User 4
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user5"
+            >
+              User 5
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user6"
+            >
+              User 6
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user7"
+            >
+              User 7
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user8"
+            >
+              User 8
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user9"
+            >
+              User 9
+            </button>
+            <button
+              type="button"
+              class="conversation-tab"
+              data-room="user10"
+            >
+              User 10
+            </button>
+          </div>
+        </section>
 
-        <div class="admin-row" data-user="user3">
-          <span class="admin-user-label">User 3</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+        <section class="menu-section">
+          <h3 class="menu-section-title">Nick & Şifre</h3>
 
-        <div class="admin-row" data-user="user4">
-          <span class="admin-user-label">User 4</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user1">
+            <span class="admin-user-label">User 1</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div class="admin-row" data-user="user5">
-          <span class="admin-user-label">User 5</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user2">
+            <span class="admin-user-label">User 2</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div class="admin-row" data-user="user6">
-          <span class="admin-user-label">User 6</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user3">
+            <span class="admin-user-label">User 3</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div class="admin-row" data-user="user7">
-          <span class="admin-user-label">User 7</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user4">
+            <span class="admin-user-label">User 4</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div class="admin-row" data-user="user8">
-          <span class="admin-user-label">User 8</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user5">
+            <span class="admin-user-label">User 5</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div class="admin-row" data-user="user9">
-          <span class="admin-user-label">User 9</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user6">
+            <span class="admin-user-label">User 6</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div class="admin-row" data-user="user10">
-          <span class="admin-user-label">User 10</span>
-          <input
-            type="text"
-            class="admin-password-input"
-            placeholder="Şifre"
-          />
-          <button type="button" class="admin-save-button">Kaydet</button>
-        </div>
+          <div class="admin-row" data-user="user7">
+            <span class="admin-user-label">User 7</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
 
-        <div id="adminStatus"></div>
+          <div class="admin-row" data-user="user8">
+            <span class="admin-user-label">User 8</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
+
+          <div class="admin-row" data-user="user9">
+            <span class="admin-user-label">User 9</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
+
+          <div class="admin-row" data-user="user10">
+            <span class="admin-user-label">User 10</span>
+            <input
+              type="text"
+              class="admin-name-input"
+              placeholder="Nick"
+            />
+            <input
+              type="text"
+              class="admin-password-input"
+              placeholder="Şifre"
+            />
+            <button type="button" class="admin-save-button">Kaydet</button>
+          </div>
+
+          <div id="adminStatus" class="admin-status"></div>
+        </section>
       </aside>
+
+      <div id="menuBackdrop" class="menu-backdrop"></div>
 
       <div class="chat-container hidden-chat">
         <header class="chat-header">
-          <img src="logo.png" alt="Logo" class="logo" />
-          <h1></h1>
+          <div class="chat-header-main">
+            <button
+              type="button"
+              id="menuToggle"
+              class="menu-button"
+              aria-label="Menü"
+            >
+              ☰
+            </button>
+            <img src="logo.png" alt="Logo" class="logo" />
+            <h1></h1>
+          </div>
         </header>
 
         <main class="chat-main">
@@ -141,7 +288,7 @@
         </main>
 
         <footer class="chat-footer">
-          <button id="imageButton" class="icon-button">🖼</button>
+          <button id="imageButton" class="icon-button">📷</button>
           <input
             id="imageInput"
             type="file"
@@ -161,13 +308,13 @@
 
     <div id="viewerOverlay" class="viewer-overlay hidden">
       <div class="viewer-inner">
-        <button id="viewerClose" class="viewer-close">Ç-</button>
+        <button id="viewerClose" class="viewer-close">×</button>
         <img id="viewerImage" class="viewer-image" alt="Fotoğraf" />
         <div id="viewerCountdown" class="viewer-countdown"></div>
       </div>
     </div>
 
-    <!-- Bu sayfa iÇõin sabit isimler -->
+    <!-- Bu sayfa için sabit isimler -->
     <script>
       window.MY_NAME = "User 1";
       window.PEER_NAME = "User 2";
@@ -175,31 +322,36 @@
       window.REQUIRE_LOGIN = true;
     </script>
 
-    <!-- Firebase SDK (Compat sÇ¬rÇ¬mleri, bundler gerektirmez) -->
+    <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
-	    <!-- Uygulama kodu -->
-	    <script src="app.js"></script>
+    <!-- Uygulama kodu -->
+    <script src="app.js"></script>
+    <!-- User1 için hamburger menü (şifreler + sohbet geçişleri) -->
+    <script src="hamburger.js"></script>
+    <!-- User1 için nick düzenleme -->
+    <script src="admin-nick.js"></script>
 
-	    <!-- İlk girişte user1 için Şifre otomatik ayarla -->
-	    <script>
-	      document.addEventListener("DOMContentLoaded", function () {
-	        if (!window.firebase) return;
-	        try {
-	          const db = firebase.database();
-	          const ref = db.ref("passwords").child("user1");
-	          ref.once("value").then((snap) => {
-            const current = snap.val();
+    <!-- İlk girişte user1 için varsayılan şifreyi ayarla -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!window.firebase) return;
+        try {
+          var db = firebase.database();
+          var ref = db.ref("passwords").child("user1");
+          ref.once("value").then(function (snap) {
+            var current = snap.val();
             if (current === null || current === "") {
-              // BurayŽñ istediŽYin ilk ŞYifreye gÇôre deŽYiŞYtir
+              // Burayı istediğin ilk şifreye göre değiştir
               ref.set("1234");
             }
           });
-	        } catch (e) {
-	          console.error(e);
-	        }
-	      });
-	    </script>
-	  </body>
-	</html>
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    </script>
+  </body>
+</html>
+
