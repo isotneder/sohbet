@@ -10,24 +10,24 @@
   <body>
     <div id="loginOverlay" class="login-overlay">
       <div class="login-box">
-        <h2>Giriş</h2>
+        <h2>GiriŞY</h2>
         <input
           type="password"
           id="passwordInput"
           placeholder="Şifre"
           autocomplete="off"
         />
-        <button id="loginButton">Giriş yap</button>
+        <button id="loginButton">GiriY yap</button>
         <div id="loginError" class="login-error"></div>
       </div>
     </div>
 
     <div class="admin-layout">
       <aside id="adminPanel" class="admin-panel">
-        <h2>Kullanıcı Şifreleri</h2>
+        <h2>KullanŽñcŽñ Şifreleri</h2>
 
         <div class="admin-row" data-user="user1">
-          <span class="admin-user-label">User 1</span>
+          <span class="admin-user-label">İsa</span>
           <input
             type="text"
             class="admin-password-input"
@@ -135,20 +135,6 @@
           <h1></h1>
         </header>
 
-        <div id="conversationTabs" class="conversation-tabs">
-          <button class="conversation-tab active" data-room="user2">
-            User 2
-          </button>
-          <button class="conversation-tab" data-room="user3">User 3</button>
-          <button class="conversation-tab" data-room="user4">User 4</button>
-          <button class="conversation-tab" data-room="user5">User 5</button>
-          <button class="conversation-tab" data-room="user6">User 6</button>
-          <button class="conversation-tab" data-room="user7">User 7</button>
-          <button class="conversation-tab" data-room="user8">User 8</button>
-          <button class="conversation-tab" data-room="user9">User 9</button>
-          <button class="conversation-tab" data-room="user10">User 10</button>
-        </div>
-
         <main class="chat-main">
           <div id="messages" class="messages"></div>
           <div id="typingIndicator" class="typing-indicator"></div>
@@ -175,13 +161,13 @@
 
     <div id="viewerOverlay" class="viewer-overlay hidden">
       <div class="viewer-inner">
-        <button id="viewerClose" class="viewer-close">×</button>
+        <button id="viewerClose" class="viewer-close">Ç-</button>
         <img id="viewerImage" class="viewer-image" alt="Fotoğraf" />
         <div id="viewerCountdown" class="viewer-countdown"></div>
       </div>
     </div>
 
-    <!-- Bu sayfa için sabit isimler -->
+    <!-- Bu sayfa iÇõin sabit isimler -->
     <script>
       window.MY_NAME = "User 1";
       window.PEER_NAME = "User 2";
@@ -189,31 +175,31 @@
       window.REQUIRE_LOGIN = true;
     </script>
 
-    <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
+    <!-- Firebase SDK (Compat sÇ¬rÇ¬mleri, bundler gerektirmez) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
-    <!-- Uygulama kodu -->
-    <script src="app.js"></script>
+	    <!-- Uygulama kodu -->
+	    <script src="app.js"></script>
 
-    <!-- İlk girişte user1 için şifre otomatik ayarla -->
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        if (!window.firebase) return;
-        try {
-          const db = firebase.database();
-          const ref = db.ref("passwords").child("user1");
-          ref.once("value").then((snap) => {
+	    <!-- İlk girişte user1 için Şifre otomatik ayarla -->
+	    <script>
+	      document.addEventListener("DOMContentLoaded", function () {
+	        if (!window.firebase) return;
+	        try {
+	          const db = firebase.database();
+	          const ref = db.ref("passwords").child("user1");
+	          ref.once("value").then((snap) => {
             const current = snap.val();
             if (current === null || current === "") {
-              // Burayı istediğin ilk şifreye göre değiştir
+              // BurayŽñ istediŽYin ilk ŞYifreye gÇôre deŽYiŞYtir
               ref.set("1234");
             }
           });
-        } catch (e) {
-          console.error(e);
-        }
-      });
-    </script>
-  </body>
-</html>
+	        } catch (e) {
+	          console.error(e);
+	        }
+	      });
+	    </script>
+	  </body>
+	</html>

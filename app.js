@@ -36,8 +36,12 @@
     user10: "User 10",
   };
 
+  // Firebase'den gelen isimler (override)
+  let displayNames = { ...userDisplayNames };
+  const displayNamesRef = db.ref("displayNames");
+
   function getUserDisplayName(key) {
-    return userDisplayNames[key] || key;
+    return displayNames[key] || userDisplayNames[key] || key;
   }
 
   // DOM
@@ -49,6 +53,7 @@
   const messagesDiv = document.getElementById("messages");
   const typingIndicator = document.getElementById("typingIndicator");
   const headerTitle = document.querySelector(".chat-header h1");
+  const clearChatButton = document.getElementById("clearChatButton");
 
   // Fotoğraf görüntüleme overlay
   const viewerOverlay = document.getElementById("viewerOverlay");
@@ -65,6 +70,45 @@
   let messagesRef = null;
   let typingRef = null;
   let typingTimeout = null;
+
+  // İsimler değiştiğinde UI'ı güncelle
+  displayNamesRef.on("value", (snapshot) => {
+    const val = snapshot.val() || {};
+    displayNames = { ...userDisplayNames, ...val };
+
+    // Admin panel etiketleri
+    const panel = document.getElementById("adminPanel");
+    if (panel) {
+      panel.querySelectorAll(".admin-row").forEach((row) => {
+        const key = row.getAttribute("data-user");
+        const labelEl = row.querySelector(".admin-user-label");
+        const nameInput = row.querySelector(".admin-name-input");
+        const displayName = key ? getUserDisplayName(key) : "";
+        if (labelEl && key) {
+          labelEl.textContent = displayName;
+        }
+        if (nameInput && key) {
+          if (!nameInput.matches(":focus")) {
+            nameInput.value = val[key] || displayName;
+          }
+        }
+      });
+    }
+
+    // User1 sekmeleri
+    const tabs = document.querySelectorAll(".conversation-tab");
+    tabs.forEach((btn) => {
+      const key = btn.getAttribute("data-room");
+      if (key) {
+        btn.textContent = getUserDisplayName(key);
+      }
+    });
+
+    // User1 başlık
+    if (headerTitle && isHubUser && currentRoomId) {
+      headerTitle.textContent = getUserDisplayName(currentRoomId);
+    }
+  });
 
   // Şifre zorunlu mu?
   function canUseChat() {
@@ -451,6 +495,32 @@
         el.parentNode.removeChild(el);
       }
     });
+  }
+
+  // Aktif sohbetin tüm mesajlarını sil (sadece User1)
+  function clearCurrentConversation() {
+    if (!isHubUser) return;
+    const roomId = currentRoomId || getDefaultRoomId();
+    if (!roomId) return;
+    if (
+      !window.confirm(
+        "Bu sohbetin tüm mesajlarını silmek istiyor musun?"
+      )
+    ) {
+      return;
+    }
+
+    const ref = getRoomMessagesRef(roomId);
+    ref
+      .remove()
+      .then(() => {
+        if (messagesDiv) {
+          messagesDiv.innerHTML = "";
+        }
+      })
+      .catch((err) => {
+        console.error("Mesajları silerken hata:", err);
+      });
   }
 
   // Oda değiştirme (User1 için farklı kullanıcılarla sohbet geçişi)

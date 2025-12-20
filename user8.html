@@ -73,6 +73,25 @@
 
     <!-- Uygulama kodu -->
     <script src="app.js"></script>
+
+    <!-- User 1 ismini displayNames'ten Çek -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!window.firebase) return;
+        try {
+          var db = firebase.database();
+          var titleEl = document.querySelector(".chat-header h1");
+          var nameRef = db.ref("displayNames").child("user1");
+          nameRef.on("value", function (snap) {
+            var name = snap.val() || "User 1";
+            if (titleEl) {
+              titleEl.textContent = name;
+            }
+          });
+        } catch (e) {
+          console.error("displayNames header error", e);
+        }
+      });
+    </script>
   </body>
 </html>
-
