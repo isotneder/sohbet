@@ -321,8 +321,7 @@
   function setTyping(isTyping) {
     if (!canUseChat()) return;
     if (!typingRef) return;
-    const name = getCurrentName();
-    const key = myNameFromPage || name;
+    const key = userKey || getCurrentName();
     if (!key) return;
     typingRef.child(key).set(isTyping);
   }
@@ -342,14 +341,14 @@
     if (!typingRef) return;
 
     typingRef.on("value", (snapshot) => {
-      const currentName = getCurrentName();
+      const currentKey = userKey || getCurrentName();
       let otherTypingName = null;
 
       snapshot.forEach((child) => {
         const name = child.key;
         const isTyping = child.val();
-        if (isTyping && name !== currentName) {
-          otherTypingName = name;
+        if (isTyping && name !== currentKey) {
+          otherTypingName = getUserDisplayName(name);
         }
       });
 
