@@ -196,40 +196,9 @@
         <div id="loginError" class="entry-error"></div>
       </form>
 
-      <div class="entry-separator"></div>
-
-      <form id="createUserForm" class="entry-form" autocomplete="off">
-        <div class="entry-section">
-          <div class="entry-section-title">Yeni kullanici olustur</div>
-        </div>
-
-        <div class="entry-field">
-          <label class="entry-label" for="createNameInput">Isim</label>
-          <input
-            type="text"
-            id="createNameInput"
-            class="entry-input"
-            placeholder="Isim"
-            autocomplete="off"
-            required
-          />
-        </div>
-
-        <div class="entry-field">
-          <label class="entry-label" for="createPasswordInput">Sifre</label>
-          <input
-            type="password"
-            id="createPasswordInput"
-            class="entry-input"
-            placeholder="Sifre"
-            autocomplete="off"
-            required
-          />
-        </div>
-
-        <button class="entry-button" type="submit">Talep gonder</button>
-        <div id="createUserStatus" class="entry-hint"></div>
-      </form>
+      <p class="entry-note">
+        Hesabiniz yoksa <a class="entry-link" href="create.html">olusturun</a>.
+      </p>
 
       <p class="entry-note">
         Şifreyi unuttuysan User 1 üzerinden ayarlayabilirsin.
@@ -262,11 +231,6 @@
         var userLabels = document.querySelectorAll(".entry-user");
         var dividerEl = document.querySelector(".entry-divider");
         var emptyEl = document.getElementById("entryUserEmpty");
-        var createForm = document.getElementById("createUserForm");
-        var createNameInput = document.getElementById("createNameInput");
-        var createPasswordInput = document.getElementById("createPasswordInput");
-        var createStatusEl = document.getElementById("createUserStatus");
-
         var displayNamesCache = {};
         var passwordsCache = {};
         var fallbackNames = {
@@ -287,27 +251,9 @@
           errorEl.textContent = message || "";
         }
 
-        function setCreateStatus(message, isError) {
-          if (!createStatusEl) return;
-          createStatusEl.textContent = message || "";
-          createStatusEl.style.color = isError ? "#f97373" : "#9ca3af";
-        }
-
         function getSelectedUserKey() {
           var checked = document.querySelector('input[name="user"]:checked');
           return checked ? checked.value : "";
-        }
-
-        function normalizeName(value) {
-          return (value || "").toString().trim().toLowerCase();
-        }
-
-        function isNameTaken(name) {
-          var target = normalizeName(name);
-          if (!target) return false;
-          return Object.keys(displayNamesCache).some(function (key) {
-            return normalizeName(displayNamesCache[key]) === target;
-          });
         }
 
         function applyUserList() {
@@ -413,44 +359,6 @@
           });
         }
 
-        if (createForm) {
-          createForm.addEventListener("input", function () {
-            setCreateStatus("");
-          });
-
-          createForm.addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            var name = (createNameInput && createNameInput.value.trim()) || "";
-            var password =
-              (createPasswordInput && createPasswordInput.value.trim()) || "";
-
-            if (!name || !password) {
-              setCreateStatus("Isim ve sifre gir.", true);
-              return;
-            }
-
-            if (isNameTaken(name)) {
-              setCreateStatus("Bu isim zaten kullaniliyor.", true);
-              return;
-            }
-
-            db.ref("userRequests")
-              .push({
-                name: name,
-                password: password,
-                createdAt: Date.now(),
-              })
-              .then(function () {
-                setCreateStatus("Talep gonderildi. Onay bekleniyor.");
-                createForm.reset();
-              })
-              .catch(function (err) {
-                console.error("create user error", err);
-                setCreateStatus("Talep gonderilemedi.", true);
-              });
-          });
-        }
       })();
     </script>
   </body>

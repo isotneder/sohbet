@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kullanici Olustur</title>
+    <link rel="icon" type="image/png" href="logo.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="entry-body">
+    <main class="entry-container">
+      <header class="entry-header">
+        <img src="logo.png" alt="Logo" class="entry-logo" />
+        <div>
+          <h1>Yeni Kullanici</h1>
+          <p class="entry-subtitle">
+            Talebiniz yonetici onayindan sonra aktif olur.
+          </p>
+        </div>
+      </header>
+
+      <form id="createUserForm" class="entry-form" autocomplete="off">
+        <div class="entry-field">
+          <label class="entry-label" for="createNameInput">Isim</label>
+          <input
+            type="text"
+            id="createNameInput"
+            class="entry-input"
+            placeholder="Isim"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="entry-field">
+          <label class="entry-label" for="createPasswordInput">Sifre</label>
+          <input
+            type="password"
+            id="createPasswordInput"
+            class="entry-input"
+            placeholder="Sifre"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <button class="entry-button" type="submit">Talep gonder</button>
+        <div id="createUserStatus" class="entry-hint"></div>
+      </form>
+
+      <p class="entry-note">
+        Zaten hesabin varsa <a class="entry-link" href="index.html">giris yap</a>.
+      </p>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <script>
+      (function () {
+        if (!window.firebase) return;
+
+        var firebaseConfig = {
+          apiKey: "AIzaSyAG__4nFoAWy368EFicS9N108IkaBAwe2s",
+          authDomain: "sohbet-b417a.firebaseapp.com",
+          databaseURL:
+            "https://sohbet-b417a-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "sohbet-b417a",
+        };
+
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+
+        var db = firebase.database();
+        var form = document.getElementById("createUserForm");
+        var nameInput = document.getElementById("createNameInput");
+        var passwordInput = document.getElementById("createPasswordInput");
+        var statusEl = document.getElementById("createUserStatus");
+
+        function setStatus(message, isError) {
+          if (!statusEl) return;
+          statusEl.textContent = message || "";
+          statusEl.style.color = isError ? "#f97373" : "#9ca3af";
+        }
+
+        function normalizeName(value) {
+          return (value || "").toString().trim().toLowerCase();
+        }
+
+        function nameExists(name, names) {
+          var target = normalizeName(name);
+          if (!target) return false;
+          return Object.keys(names || {}).some(function (key) {
+            return normalizeName(names[key]) === target;
+          });
+        }
+
+        function requestExists(name, requests) {
+          var target = normalizeName(name);
+          if (!target) return false;
+          return Object.keys(requests || {}).some(function (key) {
+            var req = requests[key];
+            return req && normalizeName(req.name) === target;
+          });
+        }
+
+        if (form) {
+          form.addEventListener("input", function () {
+            setStatus("");
+          });
+
+          form.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            var name = (nameInput && nameInput.value.trim()) || "";
+            var password = (passwordInput && passwordInput.value.trim()) || "";
+
+            if (!name || !password) {
+              setStatus("Isim ve sifre gir.", true);
+              return;
+            }
+
+            Promise.all([
+              db.ref("displayNames").once("value"),
+              db.ref("userRequests").once("value"),
+            ])
+              .then(function (results) {
+                var names = results[0].val() || {};
+                var requests = results[1].val() || {};
+
+                if (nameExists(name, names) || requestExists(name, requests)) {
+                  setStatus("Bu isim zaten kullaniliyor.", true);
+                  return;
+                }
+
+                return db.ref("userRequests").push({
+                  name: name,
+                  password: password,
+                  createdAt: Date.now(),
+                });
+              })
+              .then(function () {
+                setStatus("Talep gonderildi. Onay bekleniyor.");
+                form.reset();
+              })
+              .catch(function (err) {
+                console.error("create user error", err);
+                setStatus("Talep gonderilemedi.", true);
+              });
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -968,6 +968,15 @@ body.menu-open {
   color: #9ca3af;
 }
 
+.entry-link {
+  color: #a5b4fc;
+  text-decoration: none;
+}
+
+.entry-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .entry-container {
     max-width: 100%;
