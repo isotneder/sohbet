@@ -712,6 +712,56 @@ button:active,
   margin-top: 8px;
 }
 
+.request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.request-card {
+  border: 1px solid #1f2937;
+  background: #0b1220;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.request-meta {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.request-button {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.request-button:hover {
+  background: #1f2937;
+}
+
+.request-empty {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
 .menu-backdrop {
   position: fixed;
   inset: 0;
@@ -806,6 +856,24 @@ body.menu-open {
   background: #1f2937;
   opacity: 0.9;
   margin: 4px 0;
+}
+
+.entry-empty {
+  display: none;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.entry-separator {
+  height: 1px;
+  background: #1f2937;
+  opacity: 0.8;
+}
+
+.entry-hint {
+  min-height: 16px;
+  font-size: 0.8rem;
+  color: #9ca3af;
 }
 
 .entry-user {

@@ -53,6 +53,143 @@
           });
       });
     });
+
+    var requestList = document.getElementById("requestList");
+    if (requestList) {
+      var requestStatus = document.getElementById("requestStatus");
+      var requestRef = db.ref("userRequests");
+      var availableUserKeys = [
+        "user2",
+        "user3",
+        "user4",
+        "user5",
+        "user6",
+        "user7",
+        "user8",
+        "user9",
+        "user10",
+      ];
+
+      function setRequestStatus(message, isError) {
+        if (!requestStatus) return;
+        requestStatus.textContent = message || "";
+        requestStatus.style.color = isError ? "#f97373" : "#a5b4fc";
+      }
+
+      function getAvailableSlot(names, passwords) {
+        for (var i = 0; i < availableUserKeys.length; i += 1) {
+          var key = availableUserKeys[i];
+          var hasName = names && names[key];
+          var hasPassword = passwords && passwords[key];
+          if (!hasName && !hasPassword) {
+            return key;
+          }
+        }
+        return "";
+      }
+
+      function approveRequest(requestId, requestData) {
+        if (!requestData || !requestData.name || !requestData.password) {
+          setRequestStatus("Talep verisi eksik.", true);
+          return Promise.resolve();
+        }
+
+        return Promise.all([
+          db.ref("displayNames").once("value"),
+          db.ref("passwords").once("value"),
+        ])
+          .then(function (results) {
+            var names = results[0].val() || {};
+            var passwords = results[1].val() || {};
+            var slot = getAvailableSlot(names, passwords);
+            if (!slot) {
+              setRequestStatus("Bos slot yok.", true);
+              return;
+            }
+
+            var updates = {};
+            updates["displayNames/" + slot] = requestData.name;
+            updates["passwords/" + slot] = requestData.password;
+            updates["userRequests/" + requestId] = null;
+
+            return db.ref().update(updates).then(function () {
+              setRequestStatus(requestData.name + " icin " + slot + " acildi.");
+            });
+          })
+          .catch(function (err) {
+            setRequestStatus("Onay hatasi: " + err.message, true);
+          });
+      }
+
+      function renderRequests(requests) {
+        requestList.innerHTML = "";
+
+        var keys = requests ? Object.keys(requests) : [];
+        var pendingKeys = keys.filter(function (key) {
+          var req = requests[key];
+          return req && req.name && req.password;
+        });
+
+        if (!pendingKeys.length) {
+          var emptyEl = document.createElement("div");
+          emptyEl.className = "request-empty";
+          emptyEl.textContent = "Bekleyen talep yok.";
+          requestList.appendChild(emptyEl);
+          return;
+        }
+
+        pendingKeys.sort(function (a, b) {
+          var aTime = requests[a].createdAt || 0;
+          var bTime = requests[b].createdAt || 0;
+          return aTime - bTime;
+        });
+
+        pendingKeys.forEach(function (key) {
+          var request = requests[key];
+          var card = document.createElement("div");
+          card.className = "request-card";
+
+          var nameEl = document.createElement("div");
+          nameEl.className = "request-name";
+          nameEl.textContent = request.name;
+
+          var metaEl = document.createElement("div");
+          metaEl.className = "request-meta";
+          if (request.createdAt) {
+            metaEl.textContent = new Date(request.createdAt).toLocaleString(
+              "tr-TR"
+            );
+          } else {
+            metaEl.textContent = "Tarih yok";
+          }
+
+          var actionsEl = document.createElement("div");
+          actionsEl.className = "request-actions";
+
+          var approveButton = document.createElement("button");
+          approveButton.type = "button";
+          approveButton.className = "request-button";
+          approveButton.textContent = "Onayla";
+          approveButton.addEventListener("click", function () {
+            approveButton.disabled = true;
+            approveRequest(key, request).then(function () {
+              approveButton.disabled = false;
+            });
+          });
+
+          actionsEl.appendChild(approveButton);
+
+          card.appendChild(nameEl);
+          card.appendChild(metaEl);
+          card.appendChild(actionsEl);
+          requestList.appendChild(card);
+        });
+      }
+
+      requestRef.on("value", function (snapshot) {
+        renderRequests(snapshot.val() || {});
+      });
+    }
   }
 
   if (document.readyState === "loading") {
@@ -61,4 +198,3 @@
     initAdminNick();
   }
 })();
-

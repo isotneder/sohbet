@@ -175,6 +175,7 @@
               </span>
             </label>
           </div>
+          <div id="entryUserEmpty" class="entry-empty">Onayli kullanici yok.</div>
         </div>
 
         <div class="entry-field">
@@ -193,6 +194,41 @@
           Giriş yap
         </button>
         <div id="loginError" class="entry-error"></div>
+      </form>
+
+      <div class="entry-separator"></div>
+
+      <form id="createUserForm" class="entry-form" autocomplete="off">
+        <div class="entry-section">
+          <div class="entry-section-title">Yeni kullanici olustur</div>
+        </div>
+
+        <div class="entry-field">
+          <label class="entry-label" for="createNameInput">Isim</label>
+          <input
+            type="text"
+            id="createNameInput"
+            class="entry-input"
+            placeholder="Isim"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="entry-field">
+          <label class="entry-label" for="createPasswordInput">Sifre</label>
+          <input
+            type="password"
+            id="createPasswordInput"
+            class="entry-input"
+            placeholder="Sifre"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <button class="entry-button" type="submit">Talep gonder</button>
+        <div id="createUserStatus" class="entry-hint"></div>
       </form>
 
       <p class="entry-note">
@@ -224,10 +260,37 @@
         var passwordInput = document.getElementById("passwordInput");
         var errorEl = document.getElementById("loginError");
         var userLabels = document.querySelectorAll(".entry-user");
+        var dividerEl = document.querySelector(".entry-divider");
+        var emptyEl = document.getElementById("entryUserEmpty");
+        var createForm = document.getElementById("createUserForm");
+        var createNameInput = document.getElementById("createNameInput");
+        var createPasswordInput = document.getElementById("createPasswordInput");
+        var createStatusEl = document.getElementById("createUserStatus");
+
+        var displayNamesCache = {};
+        var passwordsCache = {};
+        var fallbackNames = {
+          user1: "User 1",
+          user2: "User 2",
+          user3: "User 3",
+          user4: "User 4",
+          user5: "User 5",
+          user6: "User 6",
+          user7: "User 7",
+          user8: "User 8",
+          user9: "User 9",
+          user10: "User 10",
+        };
 
         function setError(message) {
           if (!errorEl) return;
           errorEl.textContent = message || "";
+        }
+
+        function setCreateStatus(message, isError) {
+          if (!createStatusEl) return;
+          createStatusEl.textContent = message || "";
+          createStatusEl.style.color = isError ? "#f97373" : "#9ca3af";
         }
 
         function getSelectedUserKey() {
@@ -235,20 +298,76 @@
           return checked ? checked.value : "";
         }
 
-        function updateDisplayNames(names) {
+        function normalizeName(value) {
+          return (value || "").toString().trim().toLowerCase();
+        }
+
+        function isNameTaken(name) {
+          var target = normalizeName(name);
+          if (!target) return false;
+          return Object.keys(displayNamesCache).some(function (key) {
+            return normalizeName(displayNamesCache[key]) === target;
+          });
+        }
+
+        function applyUserList() {
+          if (!userLabels || !userLabels.length) return;
+
+          var visibleCount = 0;
+          var hasAdmin = false;
+
           userLabels.forEach(function (label) {
             var key = label.getAttribute("data-user");
             var nameEl = label.querySelector(".entry-user-name");
             if (!key || !nameEl) return;
-            var fallback = nameEl.getAttribute("data-default") || key;
-            var updated = (names && names[key]) || fallback;
+
+            var fallback =
+              nameEl.getAttribute("data-default") ||
+              fallbackNames[key] ||
+              key;
+            var updated =
+              (displayNamesCache && displayNamesCache[key]) || fallback;
             nameEl.textContent = updated;
+
+            var hasPassword = passwordsCache && passwordsCache[key];
+            var isVisible = !!hasPassword;
+            label.style.display = isVisible ? "" : "none";
+
+            if (isVisible) {
+              visibleCount += 1;
+              if (key === "user1") {
+                hasAdmin = true;
+              }
+            }
           });
+
+          if (dividerEl) {
+            dividerEl.style.display =
+              hasAdmin && visibleCount > 1 ? "" : "none";
+          }
+
+          if (emptyEl) {
+            emptyEl.style.display = visibleCount === 0 ? "block" : "none";
+          }
+
+          var selectedKey = getSelectedUserKey();
+          if (selectedKey && !(passwordsCache && passwordsCache[selectedKey])) {
+            var checked = document.querySelector('input[name="user"]:checked');
+            if (checked) checked.checked = false;
+          }
         }
 
         db.ref("displayNames").on("value", function (snapshot) {
-          updateDisplayNames(snapshot.val() || {});
+          displayNamesCache = snapshot.val() || {};
+          applyUserList();
         });
+
+        db.ref("passwords").on("value", function (snapshot) {
+          passwordsCache = snapshot.val() || {};
+          applyUserList();
+        });
+
+        applyUserList();
 
         if (form) {
           form.addEventListener("input", function () {
@@ -290,6 +409,45 @@
               .catch(function (err) {
                 console.error("login error", err);
                 setError("Giriş yapılamadı.");
+              });
+          });
+        }
+
+        if (createForm) {
+          createForm.addEventListener("input", function () {
+            setCreateStatus("");
+          });
+
+          createForm.addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            var name = (createNameInput && createNameInput.value.trim()) || "";
+            var password =
+              (createPasswordInput && createPasswordInput.value.trim()) || "";
+
+            if (!name || !password) {
+              setCreateStatus("Isim ve sifre gir.", true);
+              return;
+            }
+
+            if (isNameTaken(name)) {
+              setCreateStatus("Bu isim zaten kullaniliyor.", true);
+              return;
+            }
+
+            db.ref("userRequests")
+              .push({
+                name: name,
+                password: password,
+                createdAt: Date.now(),
+              })
+              .then(function () {
+                setCreateStatus("Talep gonderildi. Onay bekleniyor.");
+                createForm.reset();
+              })
+              .catch(function (err) {
+                console.error("create user error", err);
+                setCreateStatus("Talep gonderilemedi.", true);
               });
           });
         }
