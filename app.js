@@ -127,6 +127,9 @@
   }
 
   function getCurrentName() {
+    if (userKey && displayNames[userKey]) {
+      return displayNames[userKey];
+    }
     if (myNameFromPage) return myNameFromPage;
     if (nameInput) {
       const value = nameInput.value.trim();
@@ -448,7 +451,11 @@
       hour: "2-digit",
       minute: "2-digit",
     });
-    metaEl.textContent = `${msg.name || "Bilinmeyen"} · ${timeStr}`;
+    const senderName =
+      msg.fromKey && userDisplayNames[msg.fromKey]
+        ? getUserDisplayName(msg.fromKey)
+        : msg.name || "Bilinmeyen";
+    metaEl.textContent = `${senderName} · ${timeStr}`;
 
     const contentEl = document.createElement("div");
 
