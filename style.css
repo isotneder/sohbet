@@ -800,6 +800,14 @@ body.menu-open {
   gap: 10px;
 }
 
+.entry-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: #1f2937;
+  opacity: 0.9;
+  margin: 4px 0;
+}
+
 .entry-user {
   position: relative;
   cursor: pointer;
