@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sohbet Giriş</title>
+    <title>Sohbet Giris</title>
     <link rel="icon" type="image/png" href="logo.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -12,186 +12,41 @@
       <header class="entry-header">
         <img src="logo.png" alt="Logo" class="entry-logo" />
         <div>
-          <h1>Sohbet Girişi</h1>
+          <h1>Sohbet Giris</h1>
           <p class="entry-subtitle">
-            Kullanıcını seç ve şifrenle giriş yap.
+            Kullanici adini yaz, sifrenle gir.
           </p>
         </div>
       </header>
 
       <form id="entryForm" class="entry-form" autocomplete="off">
-        <div class="entry-section">
-          <div class="entry-section-title">Kullanıcı seç</div>
-          <div class="entry-grid">
-            <label class="entry-user" data-user="user1">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user1"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 1"
-                  >User 1</span
-                >
-                <span class="entry-user-meta">Yönetici</span>
-              </span>
-            </label>
-            <div class="entry-divider" aria-hidden="true"></div>
-            <label class="entry-user" data-user="user2">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user2"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 2"
-                  >User 2</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user3">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user3"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 3"
-                  >User 3</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user4">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user4"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 4"
-                  >User 4</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user5">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user5"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 5"
-                  >User 5</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user6">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user6"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 6"
-                  >User 6</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user7">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user7"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 7"
-                  >User 7</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user8">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user8"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 8"
-                  >User 8</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user9">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user9"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 9"
-                  >User 9</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-            <label class="entry-user" data-user="user10">
-              <input
-                class="entry-radio"
-                type="radio"
-                name="user"
-                value="user10"
-                required
-              />
-              <span class="entry-user-content">
-                <span class="entry-user-name" data-default="User 10"
-                  >User 10</span
-                >
-                <span class="entry-user-meta">Kullanıcı</span>
-              </span>
-            </label>
-          </div>
-          <div id="entryUserEmpty" class="entry-empty">Onayli kullanici yok.</div>
+        <div class="entry-field">
+          <label class="entry-label" for="usernameInput">Kullanici adi</label>
+          <input
+            type="text"
+            id="usernameInput"
+            class="entry-input"
+            placeholder="Kullanici adi"
+            autocomplete="off"
+            required
+          />
         </div>
 
         <div class="entry-field">
-          <label class="entry-label" for="passwordInput">Şifre</label>
+          <label class="entry-label" for="passwordInput">Sifre</label>
           <input
             type="password"
             id="passwordInput"
+            title="Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol."
             class="entry-input"
-            placeholder="Şifre"
+            placeholder="Sifre"
             autocomplete="off"
             required
           />
         </div>
 
         <button id="loginButton" class="entry-button" type="submit">
-          Giriş yap
+          Giris yap
         </button>
         <div id="loginError" class="entry-error"></div>
       </form>
@@ -201,13 +56,12 @@
       </p>
 
       <p class="entry-note">
-        Şifreyi unuttuysan User 1 üzerinden ayarlayabilirsin.
+        Sifre sifirlama yok, yeni hesap ac.
       </p>
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
     <script>
       (function () {
         if (!window.firebase) return;
@@ -226,13 +80,10 @@
 
         var db = firebase.database();
         var form = document.getElementById("entryForm");
+        var usernameInput = document.getElementById("usernameInput");
         var passwordInput = document.getElementById("passwordInput");
         var errorEl = document.getElementById("loginError");
-        var userLabels = document.querySelectorAll(".entry-user");
-        var dividerEl = document.querySelector(".entry-divider");
-        var emptyEl = document.getElementById("entryUserEmpty");
         var displayNamesCache = {};
-        var passwordsCache = {};
         var fallbackNames = {
           user1: "User 1",
           user2: "User 2",
@@ -246,74 +97,140 @@
           user10: "User 10",
         };
 
+        var supportsCrypto = !!(window.crypto && window.crypto.subtle);
+        var textEncoder = supportsCrypto ? new TextEncoder() : null;
+
+        function normalizeName(value) {
+          return (value || "").toString().trim().toLowerCase();
+        }
+
+        function findUserKeyByName(name) {
+          var target = normalizeName(name);
+          if (!target) return "";
+          var keys = Object.keys(fallbackNames);
+          for (var i = 0; i < keys.length; i += 1) {
+            var key = keys[i];
+            if (normalizeName(key) === target) {
+              return key;
+            }
+            var candidate =
+              (displayNamesCache && displayNamesCache[key]) ||
+              fallbackNames[key] ||
+              key;
+            if (normalizeName(candidate) === target) {
+              return key;
+            }
+          }
+          return "";
+        }
+
+        function isStrongPassword(value) {
+          var password = (value || "").toString();
+          if (password.length < 8) return false;
+          var hasLower = /[a-z]/.test(password);
+          var hasUpper = /[A-Z]/.test(password);
+          var hasDigit = /[0-9]/.test(password);
+          var hasSymbol = /[^A-Za-z0-9]/.test(password);
+          var score = 0;
+          if (hasLower) score += 1;
+          if (hasUpper) score += 1;
+          if (hasDigit) score += 1;
+          if (hasSymbol) score += 1;
+          return score >= 3;
+        }
+
+        function bufferToBase64(buffer) {
+          var bytes =
+            buffer instanceof ArrayBuffer
+              ? new Uint8Array(buffer)
+              : new Uint8Array(
+                  buffer.buffer,
+                  buffer.byteOffset,
+                  buffer.byteLength
+                );
+          var binary = "";
+          var chunkSize = 0x8000;
+          for (var i = 0; i < bytes.length; i += chunkSize) {
+            var chunk = bytes.subarray(i, i + chunkSize);
+            binary += String.fromCharCode.apply(null, chunk);
+          }
+          return btoa(binary);
+        }
+
+        function base64ToBuffer(base64) {
+          var binary = atob(base64);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          return bytes.buffer;
+        }
+
+        function isPasswordHashRecord(value) {
+          return value && typeof value === "object" && value.hash && value.salt;
+        }
+
+        async function derivePasswordHash(password, saltBase64, iterations) {
+          if (!supportsCrypto || !textEncoder) return null;
+          var salt = saltBase64
+            ? new Uint8Array(base64ToBuffer(saltBase64))
+            : crypto.getRandomValues(new Uint8Array(16));
+          var iter = iterations || 150000;
+          var key = await crypto.subtle.importKey(
+            "raw",
+            textEncoder.encode(password),
+            { name: "PBKDF2" },
+            false,
+            ["deriveBits"]
+          );
+          var bits = await crypto.subtle.deriveBits(
+            { name: "PBKDF2", salt: salt, iterations: iter, hash: "SHA-256" },
+            key,
+            256
+          );
+          return {
+            hash: bufferToBase64(bits),
+            salt: saltBase64 || bufferToBase64(salt),
+            iterations: iter,
+            algo: "PBKDF2",
+            digest: "SHA-256",
+          };
+        }
+
+        async function verifyPassword(password, stored) {
+          if (typeof stored === "string") {
+            return password === stored;
+          }
+          if (!isPasswordHashRecord(stored) || !supportsCrypto) {
+            return false;
+          }
+          var derived = await derivePasswordHash(
+            password,
+            stored.salt,
+            stored.iterations
+          );
+          return !!(derived && derived.hash === stored.hash);
+        }
+
+        async function maybeUpgradeLegacyPassword(userKey, password, stored) {
+          if (!supportsCrypto || typeof stored !== "string") return;
+          try {
+            var derived = await derivePasswordHash(password);
+            if (!derived) return;
+            await db.ref("passwords").child(userKey).set(derived);
+          } catch (err) {
+            console.error("password upgrade error", err);
+          }
+        }
+
         function setError(message) {
           if (!errorEl) return;
           errorEl.textContent = message || "";
         }
 
-        function getSelectedUserKey() {
-          var checked = document.querySelector('input[name="user"]:checked');
-          return checked ? checked.value : "";
-        }
-
-        function applyUserList() {
-          if (!userLabels || !userLabels.length) return;
-
-          var visibleCount = 0;
-          var hasAdmin = false;
-
-          userLabels.forEach(function (label) {
-            var key = label.getAttribute("data-user");
-            var nameEl = label.querySelector(".entry-user-name");
-            if (!key || !nameEl) return;
-
-            var fallback =
-              nameEl.getAttribute("data-default") ||
-              fallbackNames[key] ||
-              key;
-            var updated =
-              (displayNamesCache && displayNamesCache[key]) || fallback;
-            nameEl.textContent = updated;
-
-            var hasPassword = passwordsCache && passwordsCache[key];
-            var isVisible = !!hasPassword;
-            label.style.display = isVisible ? "" : "none";
-
-            if (isVisible) {
-              visibleCount += 1;
-              if (key === "user1") {
-                hasAdmin = true;
-              }
-            }
-          });
-
-          if (dividerEl) {
-            dividerEl.style.display =
-              hasAdmin && visibleCount > 1 ? "" : "none";
-          }
-
-          if (emptyEl) {
-            emptyEl.style.display = visibleCount === 0 ? "block" : "none";
-          }
-
-          var selectedKey = getSelectedUserKey();
-          if (selectedKey && !(passwordsCache && passwordsCache[selectedKey])) {
-            var checked = document.querySelector('input[name="user"]:checked');
-            if (checked) checked.checked = false;
-          }
-        }
-
         db.ref("displayNames").on("value", function (snapshot) {
           displayNamesCache = snapshot.val() || {};
-          applyUserList();
         });
-
-        db.ref("passwords").on("value", function (snapshot) {
-          passwordsCache = snapshot.val() || {};
-          applyUserList();
-        });
-
-        applyUserList();
 
         if (form) {
           form.addEventListener("input", function () {
@@ -323,15 +240,21 @@
           form.addEventListener("submit", function (event) {
             event.preventDefault();
 
-            var userKey = getSelectedUserKey();
+            var username = (usernameInput && usernameInput.value.trim()) || "";
+            if (!username) {
+              setError("Kullanici adi gir.");
+              return;
+            }
+
+            var userKey = findUserKeyByName(username);
             if (!userKey) {
-              setError("Kullanıcı seç.");
+              setError("Kullanici bulunamadi.");
               return;
             }
 
             var password = (passwordInput && passwordInput.value.trim()) || "";
             if (!password) {
-              setError("Şifre gir.");
+              setError("Sifre gir.");
               return;
             }
 
@@ -339,26 +262,71 @@
               .child(userKey)
               .once("value")
               .then(function (snapshot) {
-                var currentPassword = snapshot.val() || "";
+                var currentPassword = snapshot.val();
                 if (!currentPassword) {
-                  setError("Bu kullanıcı için şifre ayarlanmamış.");
+                  if (userKey === "user1") {
+                    if (!supportsCrypto) {
+                      setError("Bu tarayici sifreyi olusturamiyor.");
+                      return;
+                    }
+                    if (!isStrongPassword(password)) {
+                      setError(
+                        "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli."
+                      );
+                      return;
+                    }
+                    return derivePasswordHash(password).then(function (passwordHash) {
+                      if (!passwordHash) {
+                        setError("Sifre olusturulamadi.");
+                        return;
+                      }
+                      return db
+                        .ref("passwords")
+                        .child(userKey)
+                        .set(passwordHash)
+                        .then(function () {
+                          sessionStorage.setItem(
+                            "chatAuthOk_" + userKey,
+                            "true"
+                          );
+                          window.location.href = userKey + ".html";
+                        });
+                    });
+                  }
+                  setError("Bu kullanici icin sifre ayarlanmamis.");
                   return;
                 }
-
-                if (password === currentPassword) {
-                  sessionStorage.setItem("chatAuthOk_" + userKey, "true");
-                  window.location.href = userKey + ".html";
-                } else {
-                  setError("Şifre yanlış.");
+                if (typeof currentPassword !== "string" && !supportsCrypto) {
+                  setError("Bu tarayici sifreyi dogrulayamiyor.");
+                  return;
                 }
+                return verifyPassword(password, currentPassword).then(function (ok) {
+                  if (ok) {
+                    var finishLogin = function () {
+                      sessionStorage.setItem("chatAuthOk_" + userKey, "true");
+                      window.location.href = userKey + ".html";
+                    };
+                    if (typeof currentPassword === "string") {
+                      return maybeUpgradeLegacyPassword(
+                        userKey,
+                        password,
+                        currentPassword
+                      ).then(function () {
+                        finishLogin();
+                      });
+                    }
+                    finishLogin();
+                  } else {
+                    setError("Sifre yanlis.");
+                  }
+                });
               })
               .catch(function (err) {
                 console.error("login error", err);
-                setError("Giriş yapılamadı.");
+                setError("Giris yapilamadi.");
               });
           });
         }
-
       })();
     </script>
   </body>

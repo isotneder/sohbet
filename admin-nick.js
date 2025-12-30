@@ -89,7 +89,8 @@
       }
 
       function approveRequest(requestId, requestData) {
-        if (!requestData || !requestData.name || !requestData.password) {
+        var passwordHash = requestData && (requestData.passwordHash || requestData.password);
+        if (!requestData || !requestData.name || !passwordHash) {
           setRequestStatus("Talep verisi eksik.", true);
           return Promise.resolve();
         }
@@ -109,7 +110,7 @@
 
             var updates = {};
             updates["displayNames/" + slot] = requestData.name;
-            updates["passwords/" + slot] = requestData.password;
+            updates["passwords/" + slot] = passwordHash;
             updates["userRequests/" + requestId] = null;
 
             return db.ref().update(updates).then(function () {
@@ -127,7 +128,7 @@
         var keys = requests ? Object.keys(requests) : [];
         var pendingKeys = keys.filter(function (key) {
           var req = requests[key];
-          return req && req.name && req.password;
+          return req && req.name && (req.passwordHash || req.password);
         });
 
         if (!pendingKeys.length) {

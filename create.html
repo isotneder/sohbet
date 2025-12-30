@@ -37,6 +37,7 @@
           <input
             type="password"
             id="createPasswordInput"
+            title="Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol."
             class="entry-input"
             placeholder="Sifre"
             autocomplete="off"
@@ -55,7 +56,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
     <script>
       (function () {
         if (!window.firebase) return;
@@ -78,6 +78,63 @@
         var passwordInput = document.getElementById("createPasswordInput");
         var statusEl = document.getElementById("createUserStatus");
 
+        var supportsCrypto = !!(window.crypto && window.crypto.subtle);
+        var textEncoder = supportsCrypto ? new TextEncoder() : null;
+
+        function bufferToBase64(buffer) {
+          var bytes =
+            buffer instanceof ArrayBuffer
+              ? new Uint8Array(buffer)
+              : new Uint8Array(
+                  buffer.buffer,
+                  buffer.byteOffset,
+                  buffer.byteLength
+                );
+          var binary = "";
+          var chunkSize = 0x8000;
+          for (var i = 0; i < bytes.length; i += chunkSize) {
+            var chunk = bytes.subarray(i, i + chunkSize);
+            binary += String.fromCharCode.apply(null, chunk);
+          }
+          return btoa(binary);
+        }
+
+        function base64ToBuffer(base64) {
+          var binary = atob(base64);
+          var bytes = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          return bytes.buffer;
+        }
+
+        async function derivePasswordHash(password, saltBase64, iterations) {
+          if (!supportsCrypto || !textEncoder) return null;
+          var salt = saltBase64
+            ? new Uint8Array(base64ToBuffer(saltBase64))
+            : crypto.getRandomValues(new Uint8Array(16));
+          var iter = iterations || 150000;
+          var key = await crypto.subtle.importKey(
+            "raw",
+            textEncoder.encode(password),
+            { name: "PBKDF2" },
+            false,
+            ["deriveBits"]
+          );
+          var bits = await crypto.subtle.deriveBits(
+            { name: "PBKDF2", salt: salt, iterations: iter, hash: "SHA-256" },
+            key,
+            256
+          );
+          return {
+            hash: bufferToBase64(bits),
+            salt: saltBase64 || bufferToBase64(salt),
+            iterations: iter,
+            algo: "PBKDF2",
+            digest: "SHA-256",
+          };
+        }
+
         function setStatus(message, isError) {
           if (!statusEl) return;
           statusEl.textContent = message || "";
@@ -86,6 +143,21 @@
 
         function normalizeName(value) {
           return (value || "").toString().trim().toLowerCase();
+        }
+
+        function isStrongPassword(value) {
+          var password = (value || "").toString();
+          if (password.length < 8) return false;
+          var hasLower = /[a-z]/.test(password);
+          var hasUpper = /[A-Z]/.test(password);
+          var hasDigit = /[0-9]/.test(password);
+          var hasSymbol = /[^A-Za-z0-9]/.test(password);
+          var score = 0;
+          if (hasLower) score += 1;
+          if (hasUpper) score += 1;
+          if (hasDigit) score += 1;
+          if (hasSymbol) score += 1;
+          return score >= 3;
         }
 
         function nameExists(name, names) {
@@ -120,27 +192,46 @@
               setStatus("Isim ve sifre gir.", true);
               return;
             }
+            if (!supportsCrypto) {
+              setStatus("Bu tarayici sifreyi guvenli saklayamiyor.", true);
+              return;
+            }
+            if (!isStrongPassword(password)) {
+              setStatus(
+                "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli.",
+                true
+              );
+              return;
+            }
 
-            Promise.all([
-              db.ref("displayNames").once("value"),
-              db.ref("userRequests").once("value"),
-            ])
-              .then(function (results) {
-                var names = results[0].val() || {};
-                var requests = results[1].val() || {};
-
-                if (nameExists(name, names) || requestExists(name, requests)) {
-                  setStatus("Bu isim zaten kullaniliyor.", true);
-                  return;
+            derivePasswordHash(password)
+              .then(function (passwordHash) {
+                if (!passwordHash) {
+                  setStatus("Sifre olusturulamadi.", true);
+                  return null;
                 }
 
-                return db.ref("userRequests").push({
-                  name: name,
-                  password: password,
-                  createdAt: Date.now(),
+                return Promise.all([
+                  db.ref("displayNames").once("value"),
+                  db.ref("userRequests").once("value"),
+                ]).then(function (results) {
+                  var names = results[0].val() || {};
+                  var requests = results[1].val() || {};
+
+                  if (nameExists(name, names) || requestExists(name, requests)) {
+                    setStatus("Bu isim zaten kullaniliyor.", true);
+                    return null;
+                  }
+
+                  return db.ref("userRequests").push({
+                    name: name,
+                    passwordHash: passwordHash,
+                    createdAt: Date.now(),
+                  });
                 });
               })
-              .then(function () {
+              .then(function (result) {
+                if (!result) return;
                 setStatus("Talep gonderildi. Onay bekleniyor.");
                 form.reset();
               })
