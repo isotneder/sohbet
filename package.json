@@ -1,0 +1,13 @@
+{
+  "name": "sohbet-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.11.1",
+    "firebase-functions": "^4.4.1",
+    "nodemailer": "^6.9.8"
+  }
+}

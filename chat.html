@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sohbet</title>
+    <link rel="icon" type="image/png" href="logo.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="chat-body">
+    <div class="chat-container chat-container--dm">
+      <header class="chat-header">
+        <div class="chat-header-main">
+          <img src="logo.png" alt="Logo" class="logo" />
+          <h1>Sohbet sec</h1>
+        </div>
+        <div class="chat-header-actions">
+          <button id="logoutButton" class="chip-button" type="button">
+            Cikis
+          </button>
+        </div>
+      </header>
+
+      <main class="chat-main chat-main--dm">
+        <aside class="dm-sidebar">
+          <div class="dm-search">
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Kullanici adi"
+              autocomplete="off"
+            />
+            <button id="startChatButton" type="button">Baslat</button>
+          </div>
+          <div id="conversationTabs" class="conversation-tabs"></div>
+          <div id="conversationEmpty" class="conversation-empty">
+            Henuz sohbet yok.
+          </div>
+        </aside>
+
+        <section class="dm-thread">
+          <div id="messages" class="messages"></div>
+          <div id="typingIndicator" class="typing-indicator"></div>
+        </section>
+      </main>
+
+      <footer class="chat-footer">
+        <button id="imageButton" class="icon-button">Foto</button>
+        <input
+          id="imageInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+        />
+        <input
+          id="messageInput"
+          type="text"
+          placeholder="Mesaj yaz..."
+          autocomplete="off"
+        />
+        <button id="sendButton">Gonder</button>
+      </footer>
+    </div>
+
+    <div id="viewerOverlay" class="viewer-overlay hidden">
+      <div class="viewer-inner">
+        <button id="viewerClose" class="viewer-close">X</button>
+        <img id="viewerImage" class="viewer-image" alt="Fotograf" />
+        <div id="viewerCountdown" class="viewer-countdown"></div>
+      </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="chat.js"></script>
+  </body>
+</html>

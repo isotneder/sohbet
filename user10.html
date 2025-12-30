@@ -5,93 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sohbet</title>
     <link rel="icon" type="image/png" href="logo.png" />
-    <link rel="stylesheet" href="style.css" />
+    <script>
+      window.location.replace("chat.html");
+    </script>
   </head>
-  <body>
-    <div id="loginOverlay" class="login-overlay">
-      <div class="login-box">
-        <h2>Giriş</h2>
-        <input
-          type="password"
-          id="passwordInput"
-          placeholder="Şifre"
-          autocomplete="off"
-        />
-        <button id="loginButton">Giriş yap</button>
-        <div id="loginError" class="login-error"></div>
-      </div>
-    </div>
-
-    <div class="chat-container hidden-chat">
-      <header class="chat-header">
-        <img src="logo.png" alt="Logo" class="logo" />
-        <h1></h1>
-      </header>
-
-      <main class="chat-main">
-        <div id="messages" class="messages"></div>
-        <div id="typingIndicator" class="typing-indicator"></div>
-      </main>
-
-      <footer class="chat-footer">
-        <button id="imageButton" class="icon-button">🖼</button>
-        <input
-          id="imageInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-        />
-        <input
-          id="messageInput"
-          type="text"
-          placeholder="Mesaj yaz..."
-          autocomplete="off"
-        />
-        <button id="sendButton">Gönder</button>
-      </footer>
-    </div>
-
-    <div id="viewerOverlay" class="viewer-overlay hidden">
-      <div class="viewer-inner">
-        <button id="viewerClose" class="viewer-close">×</button>
-        <img id="viewerImage" class="viewer-image" alt="Fotoğraf" />
-        <div id="viewerCountdown" class="viewer-countdown"></div>
-      </div>
-    </div>
-
-    <!-- Bu sayfa için sabit isimler -->
-    <script>
-      window.MY_NAME = "User 10";
-      window.PEER_NAME = "User 1";
-      window.USER_KEY = "user10";
-      window.REQUIRE_LOGIN = true;
-    </script>
-
-    <!-- Firebase SDK (Compat sürümleri, bundler gerektirmez) -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
-    <!-- Uygulama kodu -->
-    <script src="app.js"></script>
-
-    <!-- User 1 ismini displayNames'ten Çek -->
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        if (!window.firebase) return;
-        try {
-          var db = firebase.database();
-          var titleEl = document.querySelector(".chat-header h1");
-          var nameRef = db.ref("displayNames").child("user1");
-          nameRef.on("value", function (snap) {
-            var name = snap.val() || "User 1";
-            if (titleEl) {
-              titleEl.textContent = name;
-            }
-          });
-        } catch (e) {
-          console.error("displayNames header error", e);
-        }
-      });
-    </script>
-  </body>
+  <body></body>
 </html>

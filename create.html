@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kullanici Olustur</title>
+    <title>Yeni Hesap</title>
     <link rel="icon" type="image/png" href="logo.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -12,22 +12,34 @@
       <header class="entry-header">
         <img src="logo.png" alt="Logo" class="entry-logo" />
         <div>
-          <h1>Yeni Kullanici</h1>
+          <h1>Yeni Hesap</h1>
           <p class="entry-subtitle">
-            Talebiniz yonetici onayindan sonra aktif olur.
+            E-postana kod gider, dogrulayinca hesap acilir.
           </p>
         </div>
       </header>
 
       <form id="createUserForm" class="entry-form" autocomplete="off">
         <div class="entry-field">
-          <label class="entry-label" for="createNameInput">Isim</label>
+          <label class="entry-label" for="createNameInput">Kullanici adi</label>
           <input
             type="text"
             id="createNameInput"
             class="entry-input"
-            placeholder="Isim"
-            autocomplete="off"
+            placeholder="kullaniciadi"
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <div class="entry-field">
+          <label class="entry-label" for="createEmailInput">E-posta</label>
+          <input
+            type="email"
+            id="createEmailInput"
+            class="entry-input"
+            placeholder="mail@ornek.com"
+            autocomplete="email"
             required
           />
         </div>
@@ -40,12 +52,37 @@
             title="Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol."
             class="entry-input"
             placeholder="Sifre"
-            autocomplete="off"
+            autocomplete="new-password"
             required
           />
         </div>
 
-        <button class="entry-button" type="submit">Talep gonder</button>
+        <div class="entry-field">
+          <label class="entry-label" for="createCodeInput">Dogrulama kodu</label>
+          <input
+            type="text"
+            id="createCodeInput"
+            class="entry-input"
+            placeholder="6 haneli kod"
+            autocomplete="one-time-code"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            required
+          />
+        </div>
+
+        <div class="entry-actions">
+          <button
+            id="sendCodeButton"
+            class="entry-button entry-button--secondary"
+            type="button"
+          >
+            Kod gonder
+          </button>
+          <button id="createAccountButton" class="entry-button" type="submit">
+            Hesap olustur
+          </button>
+        </div>
         <div id="createUserStatus" class="entry-hint"></div>
       </form>
 
@@ -75,11 +112,25 @@
         var db = firebase.database();
         var form = document.getElementById("createUserForm");
         var nameInput = document.getElementById("createNameInput");
+        var emailInput = document.getElementById("createEmailInput");
         var passwordInput = document.getElementById("createPasswordInput");
+        var codeInput = document.getElementById("createCodeInput");
+        var sendCodeButton = document.getElementById("sendCodeButton");
+        var createButton = document.getElementById("createAccountButton");
         var statusEl = document.getElementById("createUserStatus");
 
         var supportsCrypto = !!(window.crypto && window.crypto.subtle);
         var textEncoder = supportsCrypto ? new TextEncoder() : null;
+        var functionsBaseUrl =
+          window.FUNCTIONS_BASE_URL ||
+          "https://europe-west1-sohbet-b417a.cloudfunctions.net";
+
+        var resendTimer = null;
+        var resendCountdown = 0;
+        var codeSentFor = "";
+        var sendButtonLabel = sendCodeButton
+          ? sendCodeButton.textContent
+          : "Kod gonder";
 
         function bufferToBase64(buffer) {
           var bytes =
@@ -141,8 +192,20 @@
           statusEl.style.color = isError ? "#f97373" : "#9ca3af";
         }
 
-        function normalizeName(value) {
+        function normalizeUsername(value) {
           return (value || "").toString().trim().toLowerCase();
+        }
+
+        function normalizeEmail(value) {
+          return (value || "").toString().trim().toLowerCase();
+        }
+
+        function isValidUsername(value) {
+          return /^[a-zA-Z0-9_]{3,20}$/.test(value || "");
+        }
+
+        function isValidEmail(value) {
+          return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value || "");
         }
 
         function isStrongPassword(value) {
@@ -160,84 +223,247 @@
           return score >= 3;
         }
 
-        function nameExists(name, names) {
-          var target = normalizeName(name);
-          if (!target) return false;
-          return Object.keys(names || {}).some(function (key) {
-            return normalizeName(names[key]) === target;
+        function requestJson(path, payload) {
+          return fetch(functionsBaseUrl + path, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload || {}),
+          }).then(function (res) {
+            return res
+              .json()
+              .catch(function () {
+                return {};
+              })
+              .then(function (data) {
+                return {
+                  ok: res.ok,
+                  status: res.status,
+                  data: data,
+                };
+              });
           });
         }
 
-        function requestExists(name, requests) {
-          var target = normalizeName(name);
-          if (!target) return false;
-          return Object.keys(requests || {}).some(function (key) {
-            var req = requests[key];
-            return req && normalizeName(req.name) === target;
+        function startResendTimer(seconds) {
+          if (!sendCodeButton) return;
+          if (resendTimer) {
+            clearInterval(resendTimer);
+          }
+          resendCountdown = seconds;
+          sendCodeButton.disabled = true;
+          sendCodeButton.textContent = "Tekrar gonder (" + resendCountdown + ")";
+          resendTimer = setInterval(function () {
+            resendCountdown -= 1;
+            if (resendCountdown <= 0) {
+              clearInterval(resendTimer);
+              resendTimer = null;
+              resendCountdown = 0;
+              sendCodeButton.disabled = false;
+              sendCodeButton.textContent = sendButtonLabel;
+              return;
+            }
+            sendCodeButton.textContent =
+              "Tekrar gonder (" + resendCountdown + ")";
+          }, 1000);
+        }
+
+        function setBusy(isBusy) {
+          if (createButton) createButton.disabled = isBusy;
+          if (sendCodeButton) {
+            if (isBusy) {
+              sendCodeButton.disabled = true;
+            } else if (resendCountdown <= 0) {
+              sendCodeButton.disabled = false;
+            }
+          }
+        }
+
+        function encodeKey(value) {
+          return (value || "")
+            .toString()
+            .replace(/\./g, ",")
+            .replace(/#/g, ",")
+            .replace(/\$/g, ",")
+            .replace(/\//g, ",")
+            .replace(/\[/g, ",")
+            .replace(/\]/g, ",");
+        }
+
+        function checkAvailability(usernameLower, emailLower) {
+          var emailKey = encodeKey(emailLower);
+          return Promise.all([
+            db.ref("usernames").child(usernameLower).once("value"),
+            db.ref("emailIndex").child(emailKey).once("value"),
+          ]).then(function (results) {
+            return {
+              usernameTaken: !!results[0].val(),
+              emailTaken: !!results[1].val(),
+            };
           });
+        }
+
+        function readInputs() {
+          var username = (nameInput && nameInput.value.trim()) || "";
+          var email = (emailInput && emailInput.value.trim()) || "";
+          var password = (passwordInput && passwordInput.value.trim()) || "";
+          var code = (codeInput && codeInput.value.trim()) || "";
+          return {
+            username: username,
+            email: email,
+            password: password,
+            code: code,
+            usernameLower: normalizeUsername(username),
+            emailLower: normalizeEmail(email),
+          };
+        }
+
+        function validateInputs(values, requireCode) {
+          if (!values.username || !values.email || !values.password) {
+            setStatus("Kullanici adi, e-posta ve sifre gir.", true);
+            return false;
+          }
+          if (!isValidUsername(values.username)) {
+            setStatus(
+              "Kullanici adi 3-20 karakter, harf/rakam/_ olmali.",
+              true
+            );
+            return false;
+          }
+          if (!isValidEmail(values.email)) {
+            setStatus("E-posta formatini kontrol et.", true);
+            return false;
+          }
+          if (!supportsCrypto) {
+            setStatus("Bu tarayici sifreyi guvenli saklayamiyor.", true);
+            return false;
+          }
+          if (!isStrongPassword(values.password)) {
+            setStatus(
+              "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli.",
+              true
+            );
+            return false;
+          }
+          if (requireCode) {
+            if (!values.code) {
+              setStatus("Dogrulama kodu gir.", true);
+              return false;
+            }
+            if (!/^[0-9]{6}$/.test(values.code)) {
+              setStatus("Kod 6 haneli olmali.", true);
+              return false;
+            }
+          }
+          return true;
         }
 
         if (form) {
           form.addEventListener("input", function () {
             setStatus("");
           });
+        }
 
+        if (sendCodeButton) {
+          sendCodeButton.addEventListener("click", function () {
+            var values = readInputs();
+            if (!validateInputs(values, false)) return;
+
+            setBusy(true);
+            setStatus("Kontrol ediliyor...");
+
+            checkAvailability(values.usernameLower, values.emailLower)
+              .then(function (availability) {
+                if (availability.usernameTaken) {
+                  setStatus("Bu kullanici adi kullaniliyor.", true);
+                  return null;
+                }
+                if (availability.emailTaken) {
+                  setStatus("Bu e-posta kullaniliyor.", true);
+                  return null;
+                }
+                return requestJson("/sendEmailCode", {
+                  email: values.email,
+                });
+              })
+              .then(function (response) {
+                if (!response) return;
+                if (!response.ok) {
+                  var message =
+                    (response.data && response.data.message) ||
+                    "Kod gonderilemedi.";
+                  setStatus(message, true);
+                  return;
+                }
+                codeSentFor = values.emailLower;
+                setStatus("Kod gonderildi. E-postani kontrol et.");
+                startResendTimer(60);
+              })
+              .catch(function (err) {
+                console.error("send code error", err);
+                setStatus("Kod gonderilemedi.", true);
+              })
+              .finally(function () {
+                setBusy(false);
+              });
+          });
+        }
+
+        if (form) {
           form.addEventListener("submit", function (event) {
             event.preventDefault();
 
-            var name = (nameInput && nameInput.value.trim()) || "";
-            var password = (passwordInput && passwordInput.value.trim()) || "";
-
-            if (!name || !password) {
-              setStatus("Isim ve sifre gir.", true);
-              return;
-            }
-            if (!supportsCrypto) {
-              setStatus("Bu tarayici sifreyi guvenli saklayamiyor.", true);
-              return;
-            }
-            if (!isStrongPassword(password)) {
-              setStatus(
-                "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli.",
-                true
-              );
+            var values = readInputs();
+            if (!validateInputs(values, true)) return;
+            if (!codeSentFor || codeSentFor !== values.emailLower) {
+              setStatus("Once kod gonder.", true);
               return;
             }
 
-            derivePasswordHash(password)
+            setBusy(true);
+            setStatus("Hesap aciliyor...");
+
+            derivePasswordHash(values.password)
               .then(function (passwordHash) {
                 if (!passwordHash) {
                   setStatus("Sifre olusturulamadi.", true);
                   return null;
                 }
-
-                return Promise.all([
-                  db.ref("displayNames").once("value"),
-                  db.ref("userRequests").once("value"),
-                ]).then(function (results) {
-                  var names = results[0].val() || {};
-                  var requests = results[1].val() || {};
-
-                  if (nameExists(name, names) || requestExists(name, requests)) {
-                    setStatus("Bu isim zaten kullaniliyor.", true);
-                    return null;
-                  }
-
-                  return db.ref("userRequests").push({
-                    name: name,
-                    passwordHash: passwordHash,
-                    createdAt: Date.now(),
-                  });
+                return requestJson("/verifyEmailCode", {
+                  email: values.email,
+                  code: values.code,
+                  username: values.username,
+                  passwordHash: passwordHash,
                 });
               })
-              .then(function (result) {
-                if (!result) return;
-                setStatus("Talep gonderildi. Onay bekleniyor.");
-                form.reset();
+              .then(function (response) {
+                if (!response) return;
+                if (!response.ok) {
+                  var message =
+                    (response.data && response.data.message) ||
+                    "Dogrulama basarisiz.";
+                  setStatus(message, true);
+                  return;
+                }
+                var data = response.data || {};
+                if (!data.uid) {
+                  setStatus("Hesap olusturulamadi.", true);
+                  return;
+                }
+                sessionStorage.setItem("chat_uid", data.uid);
+                sessionStorage.setItem(
+                  "chat_username",
+                  data.username || values.username
+                );
+                window.location.href = "chat.html";
               })
               .catch(function (err) {
                 console.error("create user error", err);
-                setStatus("Talep gonderilemedi.", true);
+                setStatus("Hesap acilamadi.", true);
+              })
+              .finally(function () {
+                setBusy(false);
               });
           });
         }
