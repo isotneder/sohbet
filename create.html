@@ -14,7 +14,7 @@
         <div>
           <h1>Yeni Hesap</h1>
           <p class="entry-subtitle">
-            E-postana kod gider, dogrulayinca hesap acilir.
+            E-posta ve sifreyle hesap acilir.
           </p>
         </div>
       </header>
@@ -57,28 +57,7 @@
           />
         </div>
 
-        <div class="entry-field">
-          <label class="entry-label" for="createCodeInput">Dogrulama kodu</label>
-          <input
-            type="text"
-            id="createCodeInput"
-            class="entry-input"
-            placeholder="6 haneli kod"
-            autocomplete="one-time-code"
-            inputmode="numeric"
-            pattern="[0-9]{6}"
-            required
-          />
-        </div>
-
         <div class="entry-actions">
-          <button
-            id="sendCodeButton"
-            class="entry-button entry-button--secondary"
-            type="button"
-          >
-            Kod gonder
-          </button>
           <button id="createAccountButton" class="entry-button" type="submit">
             Hesap olustur
           </button>
@@ -114,23 +93,11 @@
         var nameInput = document.getElementById("createNameInput");
         var emailInput = document.getElementById("createEmailInput");
         var passwordInput = document.getElementById("createPasswordInput");
-        var codeInput = document.getElementById("createCodeInput");
-        var sendCodeButton = document.getElementById("sendCodeButton");
         var createButton = document.getElementById("createAccountButton");
         var statusEl = document.getElementById("createUserStatus");
 
         var supportsCrypto = !!(window.crypto && window.crypto.subtle);
         var textEncoder = supportsCrypto ? new TextEncoder() : null;
-        var functionsBaseUrl =
-          window.FUNCTIONS_BASE_URL ||
-          "https://europe-west1-sohbet-b417a.cloudfunctions.net";
-
-        var resendTimer = null;
-        var resendCountdown = 0;
-        var codeSentFor = "";
-        var sendButtonLabel = sendCodeButton
-          ? sendCodeButton.textContent
-          : "Kod gonder";
 
         function bufferToBase64(buffer) {
           var bytes =
@@ -223,61 +190,8 @@
           return score >= 3;
         }
 
-        function requestJson(path, payload) {
-          return fetch(functionsBaseUrl + path, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload || {}),
-          }).then(function (res) {
-            return res
-              .json()
-              .catch(function () {
-                return {};
-              })
-              .then(function (data) {
-                return {
-                  ok: res.ok,
-                  status: res.status,
-                  data: data,
-                };
-              });
-          });
-        }
-
-        function startResendTimer(seconds) {
-          if (!sendCodeButton) return;
-          if (resendTimer) {
-            clearInterval(resendTimer);
-          }
-          resendCountdown = seconds;
-          sendCodeButton.disabled = true;
-          sendCodeButton.textContent = "Tekrar gonder (" + resendCountdown + ")";
-          resendTimer = setInterval(function () {
-            resendCountdown -= 1;
-            if (resendCountdown <= 0) {
-              clearInterval(resendTimer);
-              resendTimer = null;
-              resendCountdown = 0;
-              sendCodeButton.disabled = false;
-              sendCodeButton.textContent = sendButtonLabel;
-              return;
-            }
-            sendCodeButton.textContent =
-              "Tekrar gonder (" + resendCountdown + ")";
-          }, 1000);
-        }
-
         function setBusy(isBusy) {
           if (createButton) createButton.disabled = isBusy;
-          if (sendCodeButton) {
-            if (isBusy) {
-              sendCodeButton.disabled = true;
-            } else if (resendCountdown <= 0) {
-              sendCodeButton.disabled = false;
-            }
-          }
         }
 
         function encodeKey(value) {
@@ -304,22 +218,42 @@
           });
         }
 
+        function createUser(values, passwordHash) {
+          var uid = db.ref("users").push().key;
+          if (!uid) {
+            return Promise.reject(new Error("uid"));
+          }
+          var now = Date.now();
+          var emailKey = encodeKey(values.emailLower);
+          var updates = {};
+          updates["users/" + uid] = {
+            username: values.username,
+            usernameLower: values.usernameLower,
+            email: values.emailLower,
+            createdAt: now,
+          };
+          updates["usernames/" + values.usernameLower] = uid;
+          updates["emailIndex/" + emailKey] = uid;
+          updates["passwords/" + uid] = passwordHash;
+          return db.ref().update(updates).then(function () {
+            return { uid: uid, username: values.username };
+          });
+        }
+
         function readInputs() {
           var username = (nameInput && nameInput.value.trim()) || "";
           var email = (emailInput && emailInput.value.trim()) || "";
           var password = (passwordInput && passwordInput.value.trim()) || "";
-          var code = (codeInput && codeInput.value.trim()) || "";
           return {
             username: username,
             email: email,
             password: password,
-            code: code,
             usernameLower: normalizeUsername(username),
             emailLower: normalizeEmail(email),
           };
         }
 
-        function validateInputs(values, requireCode) {
+        function validateInputs(values) {
           if (!values.username || !values.email || !values.password) {
             setStatus("Kullanici adi, e-posta ve sifre gir.", true);
             return false;
@@ -346,16 +280,6 @@
             );
             return false;
           }
-          if (requireCode) {
-            if (!values.code) {
-              setStatus("Dogrulama kodu gir.", true);
-              return false;
-            }
-            if (!/^[0-9]{6}$/.test(values.code)) {
-              setStatus("Kod 6 haneli olmali.", true);
-              return false;
-            }
-          }
           return true;
         }
 
@@ -365,13 +289,15 @@
           });
         }
 
-        if (sendCodeButton) {
-          sendCodeButton.addEventListener("click", function () {
+        if (form) {
+          form.addEventListener("submit", function (event) {
+            event.preventDefault();
+
             var values = readInputs();
-            if (!validateInputs(values, false)) return;
+            if (!validateInputs(values)) return;
 
             setBusy(true);
-            setStatus("Kontrol ediliyor...");
+            setStatus("Hesap aciliyor...");
 
             checkAvailability(values.usernameLower, values.emailLower)
               .then(function (availability) {
@@ -383,78 +309,22 @@
                   setStatus("Bu e-posta kullaniliyor.", true);
                   return null;
                 }
-                return requestJson("/sendEmailCode", {
-                  email: values.email,
+                return derivePasswordHash(values.password).then(function (
+                  passwordHash
+                ) {
+                  if (!passwordHash) {
+                    setStatus("Sifre olusturulamadi.", true);
+                    return null;
+                  }
+                  return createUser(values, passwordHash);
                 });
               })
-              .then(function (response) {
-                if (!response) return;
-                if (!response.ok) {
-                  var message =
-                    (response.data && response.data.message) ||
-                    "Kod gonderilemedi.";
-                  setStatus(message, true);
-                  return;
-                }
-                codeSentFor = values.emailLower;
-                setStatus("Kod gonderildi. E-postani kontrol et.");
-                startResendTimer(60);
-              })
-              .catch(function (err) {
-                console.error("send code error", err);
-                setStatus("Kod gonderilemedi.", true);
-              })
-              .finally(function () {
-                setBusy(false);
-              });
-          });
-        }
-
-        if (form) {
-          form.addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            var values = readInputs();
-            if (!validateInputs(values, true)) return;
-            if (!codeSentFor || codeSentFor !== values.emailLower) {
-              setStatus("Once kod gonder.", true);
-              return;
-            }
-
-            setBusy(true);
-            setStatus("Hesap aciliyor...");
-
-            derivePasswordHash(values.password)
-              .then(function (passwordHash) {
-                if (!passwordHash) {
-                  setStatus("Sifre olusturulamadi.", true);
-                  return null;
-                }
-                return requestJson("/verifyEmailCode", {
-                  email: values.email,
-                  code: values.code,
-                  username: values.username,
-                  passwordHash: passwordHash,
-                });
-              })
-              .then(function (response) {
-                if (!response) return;
-                if (!response.ok) {
-                  var message =
-                    (response.data && response.data.message) ||
-                    "Dogrulama basarisiz.";
-                  setStatus(message, true);
-                  return;
-                }
-                var data = response.data || {};
-                if (!data.uid) {
-                  setStatus("Hesap olusturulamadi.", true);
-                  return;
-                }
-                sessionStorage.setItem("chat_uid", data.uid);
+              .then(function (result) {
+                if (!result) return;
+                sessionStorage.setItem("chat_uid", result.uid);
                 sessionStorage.setItem(
                   "chat_username",
-                  data.username || values.username
+                  result.username || values.username
                 );
                 window.location.href = "chat.html";
               })
