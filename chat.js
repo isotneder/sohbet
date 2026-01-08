@@ -1153,10 +1153,6 @@
     replyButton.className = "message-reply-button";
     replyButton.setAttribute("aria-label", "Yanitla");
     replyButton.appendChild(createReplyIcon());
-    const replyLabel = document.createElement("span");
-    replyLabel.className = "message-reply-label";
-    replyLabel.textContent = "Yanitla";
-    replyButton.appendChild(replyLabel);
     replyButton.addEventListener("click", (event) => {
       event.stopPropagation();
       closeAllMessageMenus();
@@ -1211,17 +1207,17 @@
       }
     });
 
-    actionsEl.appendChild(replyButton);
     actionsEl.appendChild(menuButton);
+    actionsEl.appendChild(replyButton);
     actionsEl.appendChild(menuEl);
 
     messageEl.innerHTML = "";
     if (isMe) {
-      messageEl.appendChild(bubbleEl);
       messageEl.appendChild(actionsEl);
+      messageEl.appendChild(bubbleEl);
     } else {
-      messageEl.appendChild(actionsEl);
       messageEl.appendChild(bubbleEl);
+      messageEl.appendChild(actionsEl);
     }
 
     if (!isMe) {
