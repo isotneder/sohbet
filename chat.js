@@ -617,6 +617,57 @@
     return svg;
   }
 
+  function createReplyIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "reply-icon");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+
+    const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path1.setAttribute("d", "M8 6 L4 10 L8 14");
+    path1.setAttribute("fill", "none");
+    path1.setAttribute("stroke", "currentColor");
+    path1.setAttribute("stroke-width", "2");
+    path1.setAttribute("stroke-linecap", "round");
+    path1.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path1);
+
+    const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path2.setAttribute("d", "M4 10 H12 C15 10 17 12 17 15");
+    path2.setAttribute("fill", "none");
+    path2.setAttribute("stroke", "currentColor");
+    path2.setAttribute("stroke-width", "2");
+    path2.setAttribute("stroke-linecap", "round");
+    path2.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path2);
+
+    return svg;
+  }
+
+  function createMenuIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "menu-icon");
+    svg.setAttribute("viewBox", "0 0 20 20");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+
+    const positions = [4, 10, 16];
+    positions.forEach((cx) => {
+      const circle = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "circle"
+      );
+      circle.setAttribute("cx", cx.toString());
+      circle.setAttribute("cy", "10");
+      circle.setAttribute("r", "1.6");
+      circle.setAttribute("fill", "currentColor");
+      svg.appendChild(circle);
+    });
+
+    return svg;
+  }
+
   function updateMessagePreviewCache(messageKey, payload) {
     if (!messageKey || !payload) return;
     if (payload.imageData) {
@@ -970,110 +1021,17 @@
     if (!messagesDiv || !messageKey) return;
     const target = document.getElementById(`msg-${messageKey}`);
     if (!target) return;
+    const bubble = target.querySelector(".message") || target;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
-    target.classList.add("message-highlight");
+    bubble.classList.add("message-highlight");
     setTimeout(() => {
-      target.classList.remove("message-highlight");
+      bubble.classList.remove("message-highlight");
     }, 900);
   }
 
-  function attachSwipeToReply(messageEl, msg, messageKey) {
-    if (!messageEl || !msg || !messageKey) return;
-    if (messageEl.dataset.replySwipe === "true") return;
-    messageEl.dataset.replySwipe = "true";
-
-    const direction = -1;
-    let startX = 0;
-    let startY = 0;
-    let currentX = 0;
-    let swiping = false;
-    const threshold = 60;
-    const maxTranslate = 70;
-
-    const startSwipe = (clientX, clientY) => {
-      startX = clientX;
-      startY = clientY;
-      currentX = 0;
-      swiping = false;
-      messageEl.style.transition = "none";
-      messageEl.classList.remove("is-dragging");
-    };
-
-    const moveSwipe = (clientX, clientY, event) => {
-      const dx = clientX - startX;
-      const dy = clientY - startY;
-
-      if (!swiping) {
-        if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) {
-          return;
-        }
-        if (Math.sign(dx) !== direction) {
-          return;
-        }
-        swiping = true;
-        messageEl.style.userSelect = "none";
-        messageEl.classList.add("is-dragging");
-      }
-
-      if (event && event.cancelable) {
-        event.preventDefault();
-      }
-      const translate = Math.min(maxTranslate, Math.abs(dx));
-      currentX = dx;
-      messageEl.style.transform = `translateX(${direction * translate}px)`;
-    };
-
-    const endSwipe = () => {
-      if (!swiping) return;
-      const shouldReply =
-        Math.abs(currentX) >= threshold && Math.sign(currentX) === direction;
-      messageEl.style.transition = "transform 0.2s ease";
-      messageEl.style.transform = "";
-      messageEl.style.userSelect = "";
-      messageEl.classList.remove("is-dragging");
-      swiping = false;
-      currentX = 0;
-      if (shouldReply) {
-        setReplyTarget(messageKey, msg);
-      }
-    };
-
-    messageEl.addEventListener(
-      "touchstart",
-      (event) => {
-        if (event.touches.length !== 1) return;
-        startSwipe(event.touches[0].clientX, event.touches[0].clientY);
-      },
-      { passive: true }
-    );
-
-    messageEl.addEventListener(
-      "touchmove",
-      (event) => {
-        if (event.touches.length !== 1) return;
-        moveSwipe(event.touches[0].clientX, event.touches[0].clientY, event);
-      },
-      { passive: false }
-    );
-
-    messageEl.addEventListener("touchend", endSwipe, { passive: true });
-    messageEl.addEventListener("touchcancel", endSwipe, { passive: true });
-
-    const handleMouseMove = (event) => {
-      moveSwipe(event.clientX, event.clientY, event);
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      endSwipe();
-    };
-
-    messageEl.addEventListener("mousedown", (event) => {
-      if (event.button !== 0) return;
-      startSwipe(event.clientX, event.clientY);
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+  function closeAllMessageMenus() {
+    document.querySelectorAll(".message-menu").forEach((menu) => {
+      menu.classList.add("hidden");
     });
   }
 
@@ -1106,8 +1064,12 @@
       messagesDiv.appendChild(messageEl);
     }
 
-    messageEl.className = "message";
+    messageEl.className = "message-row";
     messageEl.classList.add(isMe ? "me" : "other");
+
+    const bubbleEl = document.createElement("div");
+    bubbleEl.className = "message";
+    bubbleEl.classList.add(isMe ? "me" : "other");
 
     const date = new Date(msg.timestamp || Date.now());
     const timeStr = date.toLocaleTimeString("tr-TR", {
@@ -1170,16 +1132,85 @@
       });
     }
 
+    bubbleEl.appendChild(headerEl);
+    bubbleEl.appendChild(contentWrap);
+    bubbleEl.appendChild(footerEl);
+
+    const actionsEl = document.createElement("div");
+    actionsEl.className = "message-actions";
+
+    const replyButton = document.createElement("button");
+    replyButton.type = "button";
+    replyButton.className = "message-reply-button";
+    replyButton.setAttribute("aria-label", "Yanitla");
+    replyButton.appendChild(createReplyIcon());
+    const replyLabel = document.createElement("span");
+    replyLabel.className = "message-reply-label";
+    replyLabel.textContent = "Yanitla";
+    replyButton.appendChild(replyLabel);
+    replyButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closeAllMessageMenus();
+      setReplyTarget(key, msg);
+    });
+
+    const menuButton = document.createElement("button");
+    menuButton.type = "button";
+    menuButton.className = "message-menu-button";
+    menuButton.setAttribute("aria-label", "Mesaj menusu");
+    menuButton.appendChild(createMenuIcon());
+
+    const menuEl = document.createElement("div");
+    menuEl.className = "message-menu hidden";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "message-menu-item";
+    deleteButton.textContent = "Mesaji sil";
+    deleteButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      menuEl.classList.add("hidden");
+      if (!currentRoomId) return;
+      if (!isMe) {
+        showToast("Sadece kendi mesajini silebilirsin.");
+        return;
+      }
+      db.ref("conversations")
+        .child(currentRoomId)
+        .child("messages")
+        .child(key)
+        .remove()
+        .catch((err) => {
+          console.error("delete message error", err);
+          showToast("Mesaj silinemedi.");
+        });
+    });
+
+    menuEl.appendChild(deleteButton);
+    menuEl.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    menuButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const willOpen = menuEl.classList.contains("hidden");
+      closeAllMessageMenus();
+      if (willOpen) {
+        menuEl.classList.remove("hidden");
+      }
+    });
+
+    actionsEl.appendChild(replyButton);
+    actionsEl.appendChild(menuButton);
+    actionsEl.appendChild(menuEl);
+
     messageEl.innerHTML = "";
-    messageEl.appendChild(headerEl);
-    messageEl.appendChild(contentWrap);
-    messageEl.appendChild(footerEl);
+    messageEl.appendChild(bubbleEl);
+    messageEl.appendChild(actionsEl);
 
     if (!isMe) {
       markMessageRead(key, msg);
     }
-
-    attachSwipeToReply(messageEl, msg, key);
 
     if (isNew) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -1791,6 +1822,10 @@
       clearReplyTarget();
     });
   }
+
+  document.addEventListener("click", () => {
+    closeAllMessageMenus();
+  });
 
   if (logoutButton) {
     logoutButton.addEventListener("click", () => {
