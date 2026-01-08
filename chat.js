@@ -33,6 +33,7 @@
   const textEncoder = supportsCrypto ? new TextEncoder() : null;
   const textDecoder = supportsCrypto ? new TextDecoder() : null;
   const keyStorageKey = `chat_e2ee_${currentUser.id}`;
+  const hiddenMessageStorageKey = `chat_hidden_${currentUser.id}`;
   const sharedKeyCache = new Map();
   const pendingDecryptions = new Map();
   const messagePreviewCache = new Map();
@@ -94,6 +95,7 @@
   let searchTimer = null;
   let searchRequestId = 0;
   let replyTarget = null;
+  let hiddenMessageMap = null;
 
   function normalizeName(value) {
     return (value || "").toString().trim().toLowerCase();
@@ -154,6 +156,53 @@
     toastTimer = setTimeout(() => {
       toast.classList.remove("toast--visible");
     }, 3000);
+  }
+
+  function getHiddenMessageMap() {
+    if (hiddenMessageMap) return hiddenMessageMap;
+    try {
+      const raw = localStorage.getItem(hiddenMessageStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          hiddenMessageMap = parsed;
+          return hiddenMessageMap;
+        }
+      }
+    } catch (err) {
+      console.error("hidden message read error", err);
+    }
+    hiddenMessageMap = {};
+    return hiddenMessageMap;
+  }
+
+  function setHiddenMessageMap(map) {
+    hiddenMessageMap = map;
+    try {
+      localStorage.setItem(hiddenMessageStorageKey, JSON.stringify(map));
+    } catch (err) {
+      console.error("hidden message save error", err);
+    }
+  }
+
+  function isMessageHidden(roomId, messageKey) {
+    if (!roomId || !messageKey) return false;
+    const map = getHiddenMessageMap();
+    return !!(map[roomId] && map[roomId][messageKey]);
+  }
+
+  function hideMessageLocally(roomId, messageKey) {
+    if (!roomId || !messageKey) return;
+    const map = getHiddenMessageMap();
+    if (!map[roomId]) {
+      map[roomId] = {};
+    }
+    map[roomId][messageKey] = true;
+    setHiddenMessageMap(map);
+    const el = document.getElementById(`msg-${messageKey}`);
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
   }
 
   function resetUnread() {
@@ -1059,6 +1108,13 @@
 
   function renderMessage(key, msg) {
     if (!messagesDiv) return;
+    if (currentRoomId && isMessageHidden(currentRoomId, key)) {
+      const hiddenEl = document.getElementById(`msg-${key}`);
+      if (hiddenEl && hiddenEl.parentNode) {
+        hiddenEl.parentNode.removeChild(hiddenEl);
+      }
+      return;
+    }
 
     const isMe = isMessageFromMe(msg);
     let messageEl = document.getElementById(`msg-${key}`);
@@ -1178,7 +1234,8 @@
       menuEl.classList.add("hidden");
       if (!currentRoomId) return;
       if (!isMe) {
-        showToast("Sadece kendi mesajini silebilirsin.");
+        hideMessageLocally(currentRoomId, key);
+        showToast("Benden silindi.");
         return;
       }
       db.ref("conversations")
