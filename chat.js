@@ -35,6 +35,7 @@
   const keyStorageKey = `chat_e2ee_${currentUser.id}`;
   const sharedKeyCache = new Map();
   const pendingDecryptions = new Map();
+  const messagePreviewCache = new Map();
   let peerKeyRef = null;
 
   const encryptionState = {
@@ -55,6 +56,9 @@
   const messageInput = document.getElementById("messageInput");
   const sendButton = document.getElementById("sendButton");
   const conversationEmpty = document.getElementById("conversationEmpty");
+  const replyBar = document.getElementById("replyBar");
+  const replyText = document.getElementById("replyText");
+  const replyCancel = document.getElementById("replyCancel");
   const searchSection = document.getElementById("searchSection");
   const searchResults = document.getElementById("searchResults");
   const requestList = document.getElementById("requestList");
@@ -89,6 +93,7 @@
   let lastSearchQuery = "";
   let searchTimer = null;
   let searchRequestId = 0;
+  let replyTarget = null;
 
   function normalizeName(value) {
     return (value || "").toString().trim().toLowerCase();
@@ -519,6 +524,7 @@
     currentRoomId = null;
     currentPeerId = null;
     pendingDecryptions.clear();
+    clearReplyTarget();
     if (messagesDiv) messagesDiv.innerHTML = "";
     if (typingIndicator) typingIndicator.textContent = "";
     setHeader(null);
@@ -578,6 +584,125 @@
     return value.slice(0, 87) + "...";
   }
 
+  function createTickIcon(isDouble) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "tick-icon");
+    svg.setAttribute("viewBox", isDouble ? "0 0 20 12" : "0 0 16 12");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+
+    const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path1.setAttribute("d", "M1 7 L6 11 L15 1");
+    path1.setAttribute("fill", "none");
+    path1.setAttribute("stroke", "currentColor");
+    path1.setAttribute("stroke-width", "2");
+    path1.setAttribute("stroke-linecap", "round");
+    path1.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path1);
+
+    if (isDouble) {
+      const path2 = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path"
+      );
+      path2.setAttribute("d", "M5 7 L10 11 L19 1");
+      path2.setAttribute("fill", "none");
+      path2.setAttribute("stroke", "currentColor");
+      path2.setAttribute("stroke-width", "2");
+      path2.setAttribute("stroke-linecap", "round");
+      path2.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(path2);
+    }
+
+    return svg;
+  }
+
+  function updateMessagePreviewCache(messageKey, payload) {
+    if (!messageKey || !payload) return;
+    if (payload.imageData) {
+      messagePreviewCache.set(messageKey, { preview: "Fotograf", kind: "image" });
+      return;
+    }
+    if (payload.text) {
+      messagePreviewCache.set(messageKey, {
+        preview: trimPreview(payload.text),
+        kind: "text",
+      });
+    }
+  }
+
+  function getReplyPreview(messageKey, msg) {
+    const cached = messagePreviewCache.get(messageKey);
+    if (cached && cached.preview) return cached;
+    if (msg && msg.kind === "image") {
+      return { preview: "Fotograf", kind: "image" };
+    }
+    return { preview: "Mesaj", kind: (msg && msg.kind) || "text" };
+  }
+
+  function showReplyTarget(target) {
+    if (!replyBar || !replyText || !target) return;
+    replyBar.classList.remove("hidden");
+    replyText.textContent = `${target.name}: ${target.preview}`;
+  }
+
+  function clearReplyTarget() {
+    replyTarget = null;
+    if (replyBar) replyBar.classList.add("hidden");
+    if (replyText) replyText.textContent = "";
+  }
+
+  function setReplyTarget(messageKey, msg) {
+    if (!messageKey || !msg) return;
+    const senderName = msg.fromId === currentUser.id ? "Sen" : getMessageSenderName(msg);
+    const previewInfo = getReplyPreview(messageKey, msg);
+    replyTarget = {
+      key: messageKey,
+      fromId: msg.fromId || null,
+      preview: previewInfo.preview,
+      kind: previewInfo.kind,
+      name: senderName,
+    };
+    showReplyTarget(replyTarget);
+    if (messageInput) {
+      messageInput.focus();
+    }
+  }
+
+  function buildReplyElement(replyTo) {
+    if (!replyTo) return null;
+    const replyEl = document.createElement("div");
+    replyEl.className = "message-reply";
+
+    const titleEl = document.createElement("div");
+    titleEl.className = "message-reply-title";
+    const name =
+      replyTo.fromId === currentUser.id
+        ? "Sen"
+        : getUserNameById(replyTo.fromId);
+    titleEl.textContent = `Yanit: ${name}`;
+
+    const textEl = document.createElement("div");
+    textEl.className = "message-reply-text";
+    const cached = replyTo.key ? messagePreviewCache.get(replyTo.key) : null;
+    const preview =
+      replyTo.preview ||
+      (cached && cached.preview) ||
+      (replyTo.kind === "image" ? "Fotograf" : "Mesaj");
+    textEl.textContent = preview;
+
+    replyEl.appendChild(titleEl);
+    replyEl.appendChild(textEl);
+
+    if (replyTo.key) {
+      replyEl.addEventListener("click", () => {
+        scrollToMessage(replyTo.key);
+      });
+    }
+
+    return replyEl;
+  }
+
   function appendImageButton(contentEl, messageKey, imageData) {
     const button = document.createElement("button");
     button.classList.add("view-image-button");
@@ -599,6 +724,7 @@
       textEl.textContent = payload.text;
       contentEl.appendChild(textEl);
     }
+    updateMessagePreviewCache(messageKey, payload);
   }
 
   async function resizeImageToDataUrl(file) {
@@ -659,6 +785,14 @@
     if (!text) return;
 
     const now = Date.now();
+    const replyMeta = replyTarget
+      ? {
+          key: replyTarget.key,
+          fromId: replyTarget.fromId || null,
+          preview: replyTarget.preview || "",
+          kind: replyTarget.kind || "text",
+        }
+      : null;
 
     isSendingMessage = true;
     if (sendButton) sendButton.disabled = true;
@@ -669,24 +803,29 @@
         showToast("Sifreleme hazir degil.");
         return;
       }
+      const messageData = {
+        fromId: currentUser.id,
+        timestamp: now,
+        kind: encrypted.kind,
+        iv: encrypted.iv,
+        ciphertext: encrypted.ciphertext,
+        senderPub: encrypted.senderPub,
+        receiverPub: encrypted.receiverPub,
+        enc: encrypted.enc,
+      };
+      if (replyMeta) {
+        messageData.replyTo = replyMeta;
+      }
       await db
         .ref("conversations")
         .child(currentRoomId)
         .child("messages")
-        .push({
-          fromId: currentUser.id,
-          timestamp: now,
-          kind: encrypted.kind,
-          iv: encrypted.iv,
-          ciphertext: encrypted.ciphertext,
-          senderPub: encrypted.senderPub,
-          receiverPub: encrypted.receiverPub,
-          enc: encrypted.enc,
-        });
+        .push(messageData);
 
       updateRoomMetadata(currentRoomId, currentPeerId, now);
       messageInput.value = "";
       setTyping(false);
+      clearReplyTarget();
     } catch (err) {
       console.error("send message error", err);
       showToast("Mesaj gonderilemedi.");
@@ -723,6 +862,14 @@
     if (imageButton) imageButton.disabled = true;
 
     const now = Date.now();
+    const replyMeta = replyTarget
+      ? {
+          key: replyTarget.key,
+          fromId: replyTarget.fromId || null,
+          preview: replyTarget.preview || "",
+          kind: replyTarget.kind || "text",
+        }
+      : null;
 
     try {
       const dataUrl = await resizeImageToDataUrl(file);
@@ -731,22 +878,27 @@
         showToast("Sifreleme hazir degil.");
         return;
       }
+      const messageData = {
+        fromId: currentUser.id,
+        timestamp: now,
+        kind: encrypted.kind,
+        iv: encrypted.iv,
+        ciphertext: encrypted.ciphertext,
+        senderPub: encrypted.senderPub,
+        receiverPub: encrypted.receiverPub,
+        enc: encrypted.enc,
+      };
+      if (replyMeta) {
+        messageData.replyTo = replyMeta;
+      }
       await db
         .ref("conversations")
         .child(currentRoomId)
         .child("messages")
-        .push({
-          fromId: currentUser.id,
-          timestamp: now,
-          kind: encrypted.kind,
-          iv: encrypted.iv,
-          ciphertext: encrypted.ciphertext,
-          senderPub: encrypted.senderPub,
-          receiverPub: encrypted.receiverPub,
-          enc: encrypted.enc,
-        });
+        .push(messageData);
 
       updateRoomMetadata(currentRoomId, currentPeerId, now);
+      clearReplyTarget();
     } catch (err) {
       console.error(err);
       alert("Fotograf hazirlanirken bir hata olustu.");
@@ -814,6 +966,86 @@
     });
   }
 
+  function scrollToMessage(messageKey) {
+    if (!messagesDiv || !messageKey) return;
+    const target = document.getElementById(`msg-${messageKey}`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("message-highlight");
+    setTimeout(() => {
+      target.classList.remove("message-highlight");
+    }, 900);
+  }
+
+  function attachSwipeToReply(messageEl, msg, messageKey) {
+    if (!messageEl || !msg || !messageKey) return;
+    if (messageEl.dataset.replySwipe === "true") return;
+    messageEl.dataset.replySwipe = "true";
+
+    const isMe = isMessageFromMe(msg);
+    const direction = isMe ? -1 : 1;
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let swiping = false;
+    const threshold = 60;
+    const maxTranslate = 70;
+
+    messageEl.addEventListener(
+      "touchstart",
+      (event) => {
+        if (event.touches.length !== 1) return;
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        currentX = 0;
+        swiping = false;
+        messageEl.style.transition = "";
+      },
+      { passive: true }
+    );
+
+    messageEl.addEventListener(
+      "touchmove",
+      (event) => {
+        if (event.touches.length !== 1) return;
+        const dx = event.touches[0].clientX - startX;
+        const dy = event.touches[0].clientY - startY;
+
+        if (!swiping) {
+          if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) {
+            return;
+          }
+          if (Math.sign(dx) !== direction) {
+            return;
+          }
+          swiping = true;
+        }
+
+        event.preventDefault();
+        const translate = Math.min(maxTranslate, Math.abs(dx));
+        currentX = dx;
+        messageEl.style.transform = `translateX(${direction * translate}px)`;
+      },
+      { passive: false }
+    );
+
+    const endSwipe = () => {
+      if (!swiping) return;
+      const shouldReply =
+        Math.abs(currentX) >= threshold && Math.sign(currentX) === direction;
+      messageEl.style.transition = "transform 0.2s ease";
+      messageEl.style.transform = "";
+      swiping = false;
+      currentX = 0;
+      if (shouldReply) {
+        setReplyTarget(messageKey, msg);
+      }
+    };
+
+    messageEl.addEventListener("touchend", endSwipe, { passive: true });
+    messageEl.addEventListener("touchcancel", endSwipe, { passive: true });
+  }
+
   function markMessageRead(key, msg) {
     if (!currentRoomId || !key || !msg) return;
     if (!msg.fromId || msg.fromId === currentUser.id) return;
@@ -846,53 +1078,77 @@
     messageEl.className = "message";
     messageEl.classList.add(isMe ? "me" : "other");
 
-    const metaEl = document.createElement("div");
-    metaEl.classList.add("message-meta");
     const date = new Date(msg.timestamp || Date.now());
     const timeStr = date.toLocaleTimeString("tr-TR", {
       hour: "2-digit",
       minute: "2-digit",
     });
     const senderName = getMessageSenderName(msg);
-    metaEl.textContent = `${senderName} - ${timeStr}`;
+    const headerEl = document.createElement("div");
+    headerEl.classList.add("message-meta");
+    headerEl.textContent = senderName;
+
+    const footerEl = document.createElement("div");
+    footerEl.classList.add("message-footer");
+
+    const timeEl = document.createElement("span");
+    timeEl.className = "message-time";
+    timeEl.textContent = timeStr;
+    footerEl.appendChild(timeEl);
+
     if (isMe) {
       const statusEl = document.createElement("span");
       const isSeen =
         currentPeerId && msg.readBy && msg.readBy[currentPeerId];
       statusEl.classList.add("message-status", isSeen ? "seen" : "sent");
-      statusEl.textContent = isSeen ? "Okundu" : "Gonderildi";
-      metaEl.appendChild(statusEl);
+      statusEl.appendChild(createTickIcon(!!isSeen));
+      footerEl.appendChild(statusEl);
     }
 
-    const contentEl = document.createElement("div");
+    const contentWrap = document.createElement("div");
+    contentWrap.className = "message-content";
+
+    if (msg.replyTo) {
+      const replyEl = buildReplyElement(msg.replyTo);
+      if (replyEl) {
+        contentWrap.appendChild(replyEl);
+      }
+    }
+
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "message-body";
+    contentWrap.appendChild(bodyEl);
 
     if (msg.ciphertext) {
       const placeholder = document.createElement("div");
       placeholder.className = "message-placeholder";
       placeholder.textContent = "Sifreli mesaj";
-      contentEl.appendChild(placeholder);
+      bodyEl.appendChild(placeholder);
 
       decryptPayload(msg).then((result) => {
         if (!result) return;
         if (result.pending) {
-          markPendingDecryption(key, msg, contentEl);
+          markPendingDecryption(key, msg, bodyEl);
           return;
         }
         if (result.error) {
           placeholder.textContent = "Sifre cozumlenemedi";
           return;
         }
-        renderPayloadContent(contentEl, result.payload, key);
+        renderPayloadContent(bodyEl, result.payload, key);
       });
     }
 
     messageEl.innerHTML = "";
-    messageEl.appendChild(metaEl);
-    messageEl.appendChild(contentEl);
+    messageEl.appendChild(headerEl);
+    messageEl.appendChild(contentWrap);
+    messageEl.appendChild(footerEl);
 
     if (!isMe) {
       markMessageRead(key, msg);
     }
+
+    attachSwipeToReply(messageEl, msg, key);
 
     if (isNew) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -956,6 +1212,7 @@
       showToast("Sohbet acilamiyor. Engel var.");
       return;
     }
+    clearReplyTarget();
     const roomId = getRoomId(currentUser.id, peerId);
 
     const prevMessagesRef = messagesRef;
@@ -1495,6 +1752,12 @@
         e.preventDefault();
         performSearch();
       }
+    });
+  }
+
+  if (replyCancel) {
+    replyCancel.addEventListener("click", () => {
+      clearReplyTarget();
     });
   }
 

@@ -74,20 +74,29 @@
       </main>
 
       <footer class="chat-footer">
-        <button id="imageButton" class="icon-button">Foto</button>
-        <input
-          id="imageInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-        />
-        <input
-          id="messageInput"
-          type="text"
-          placeholder="Mesaj yaz..."
-          autocomplete="off"
-        />
-        <button id="sendButton">Gonder</button>
+        <div id="replyBar" class="reply-bar hidden">
+          <div class="reply-info">
+            <div class="reply-label">Yanit</div>
+            <div id="replyText" class="reply-text"></div>
+          </div>
+          <button id="replyCancel" class="reply-cancel" type="button">X</button>
+        </div>
+        <div class="chat-input-row">
+          <button id="imageButton" class="icon-button">Foto</button>
+          <input
+            id="imageInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+          />
+          <input
+            id="messageInput"
+            type="text"
+            placeholder="Mesaj yaz..."
+            autocomplete="off"
+          />
+          <button id="sendButton">Gonder</button>
+        </div>
       </footer>
     </div>
 

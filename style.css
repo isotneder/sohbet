@@ -163,7 +163,8 @@ body {
 }
 
 .message {
-  padding: 8px 10px;
+  position: relative;
+  padding: 8px 10px 24px;
   border-radius: 8px;
   max-width: 80%;
   font-size: 0.9rem;
@@ -183,14 +184,64 @@ body {
 
 .message-meta {
   font-size: 0.7rem;
-  opacity: 0.8;
+  opacity: 0.9;
+  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(2, 6, 23, 0.45);
+}
+
+.message-reply {
+  border-left: 3px solid #2563eb;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  margin-bottom: 6px;
+}
+
+.message-reply-title {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   margin-bottom: 2px;
 }
 
+.message-reply-text {
+  font-size: 0.8rem;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.message-highlight {
+  outline: 2px solid rgba(37, 99, 235, 0.6);
+}
+
+.message-footer {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.5);
+  color: #9ca3af;
+}
+
+.message-time {
+  line-height: 1;
+}
+
 .message-status {
-  font-size: 0.75rem;
-  margin-left: 4px;
-  opacity: 0.9;
+  display: inline-flex;
+  align-items: center;
 }
 
 .message-status.sent {
@@ -201,12 +252,78 @@ body {
   color: #60a5fa;
 }
 
+.tick-icon {
+  width: 14px;
+  height: 12px;
+  display: block;
+}
+
 .chat-footer {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   padding: 10px;
   background: #020617;
   border-top: 1px solid #1f2937;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  background: #0b1220;
+}
+
+.reply-bar.hidden {
+  display: none;
+}
+
+.reply-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reply-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.reply-text {
+  font-size: 0.8rem;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.reply-cancel {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.reply-cancel:hover {
+  background: #1f2937;
 }
 
 .chat-footer input {
@@ -1143,6 +1260,38 @@ body::after {
 
 .message-meta {
   color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.message-footer {
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.message-status.sent {
+  color: var(--muted);
+}
+
+.message-status.seen {
+  color: var(--accent-2);
+}
+
+.message-reply {
+  border-left-color: var(--accent);
+  background: var(--surface-soft);
+}
+
+.message-reply-title {
+  color: var(--muted);
+}
+
+.message-reply-text {
+  color: var(--text);
+}
+
+.message-highlight {
+  outline-color: rgba(56, 189, 248, 0.5);
 }
 
 .message-placeholder {
@@ -1173,6 +1322,29 @@ body::after {
 
 .chat-footer input::placeholder {
   color: rgba(159, 177, 201, 0.8);
+}
+
+.reply-bar {
+  background: var(--surface-alt);
+  border-color: var(--border);
+}
+
+.reply-label {
+  color: var(--muted);
+}
+
+.reply-text {
+  color: var(--text);
+}
+
+.reply-cancel {
+  background: var(--surface-alt);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.reply-cancel:hover {
+  background: var(--surface-soft);
 }
 
 .chat-footer button {
