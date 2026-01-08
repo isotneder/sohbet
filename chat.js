@@ -1035,6 +1035,12 @@
     });
   }
 
+  function closeAllConversationMenus() {
+    document.querySelectorAll(".conversation-menu").forEach((menu) => {
+      menu.classList.add("hidden");
+    });
+  }
+
   function markMessageRead(key, msg) {
     if (!currentRoomId || !key || !msg) return;
     if (!msg.fromId || msg.fromId === currentUser.id) return;
@@ -1138,6 +1144,9 @@
 
     const actionsEl = document.createElement("div");
     actionsEl.className = "message-actions";
+    actionsEl.classList.add(
+      isMe ? "message-actions--right" : "message-actions--left"
+    );
 
     const replyButton = document.createElement("button");
     replyButton.type = "button";
@@ -1151,6 +1160,7 @@
     replyButton.addEventListener("click", (event) => {
       event.stopPropagation();
       closeAllMessageMenus();
+      closeAllConversationMenus();
       setReplyTarget(key, msg);
     });
 
@@ -1194,6 +1204,7 @@
     menuButton.addEventListener("click", (event) => {
       event.stopPropagation();
       const willOpen = menuEl.classList.contains("hidden");
+      closeAllConversationMenus();
       closeAllMessageMenus();
       if (willOpen) {
         menuEl.classList.remove("hidden");
@@ -1205,8 +1216,13 @@
     actionsEl.appendChild(menuEl);
 
     messageEl.innerHTML = "";
-    messageEl.appendChild(bubbleEl);
-    messageEl.appendChild(actionsEl);
+    if (isMe) {
+      messageEl.appendChild(bubbleEl);
+      messageEl.appendChild(actionsEl);
+    } else {
+      messageEl.appendChild(actionsEl);
+      messageEl.appendChild(bubbleEl);
+    }
 
     if (!isMe) {
       markMessageRead(key, msg);
@@ -1361,26 +1377,53 @@
       const actions = document.createElement("div");
       actions.className = "conversation-actions";
 
+      const menuButton = document.createElement("button");
+      menuButton.type = "button";
+      menuButton.className = "conversation-menu-button";
+      menuButton.setAttribute("aria-label", "Sohbet menusu");
+      menuButton.appendChild(createMenuIcon());
+
+      const menuEl = document.createElement("div");
+      menuEl.className = "conversation-menu hidden";
+
       const unfollowButton = document.createElement("button");
       unfollowButton.type = "button";
-      unfollowButton.className = "conversation-action";
+      unfollowButton.className = "conversation-menu-item";
       unfollowButton.textContent = "Takipten cik";
       unfollowButton.addEventListener("click", (event) => {
         event.stopPropagation();
+        menuEl.classList.add("hidden");
         unfollowUser(otherId);
       });
 
       const blockButton = document.createElement("button");
       blockButton.type = "button";
-      blockButton.className = "conversation-action";
+      blockButton.className = "conversation-menu-item";
       blockButton.textContent = "Engelle";
       blockButton.addEventListener("click", (event) => {
         event.stopPropagation();
+        menuEl.classList.add("hidden");
         blockUser(otherId);
       });
 
-      actions.appendChild(unfollowButton);
-      actions.appendChild(blockButton);
+      menuEl.appendChild(unfollowButton);
+      menuEl.appendChild(blockButton);
+      menuEl.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+
+      menuButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const willOpen = menuEl.classList.contains("hidden");
+        closeAllMessageMenus();
+        closeAllConversationMenus();
+        if (willOpen) {
+          menuEl.classList.remove("hidden");
+        }
+      });
+
+      actions.appendChild(menuButton);
+      actions.appendChild(menuEl);
       item.appendChild(button);
       item.appendChild(actions);
       conversationTabs.appendChild(item);
@@ -1825,6 +1868,7 @@
 
   document.addEventListener("click", () => {
     closeAllMessageMenus();
+    closeAllConversationMenus();
   });
 
   if (logoutButton) {

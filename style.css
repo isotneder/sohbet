@@ -171,7 +171,7 @@ body {
 
 .message-row.me {
   justify-content: flex-end;
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 .message-row.other {
@@ -188,7 +188,7 @@ body {
 }
 
 .message-row .message {
-  max-width: calc(100% - 96px);
+  max-width: calc(100% - 120px);
 }
 
 .message.me {
@@ -208,6 +208,16 @@ body {
   gap: 6px;
   position: relative;
   flex: 0 0 auto;
+}
+
+.message-actions--left .message-menu {
+  left: 0;
+  right: auto;
+}
+
+.message-actions--right .message-menu {
+  right: 0;
+  left: auto;
 }
 
 .message-reply-button {
@@ -1892,22 +1902,54 @@ body::after {
 }
 
 .dm-sidebar .conversation-actions {
+  position: relative;
   display: flex;
-  gap: 4px;
+  align-items: center;
 }
 
-.dm-sidebar .conversation-action {
-  padding: 4px 8px;
+.dm-sidebar .conversation-menu-button {
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text);
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  white-space: nowrap;
 }
 
-.dm-sidebar .conversation-action:hover {
+.dm-sidebar .conversation-menu-button:hover {
+  background: var(--surface-soft);
+}
+
+.dm-sidebar .conversation-menu {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  min-width: 140px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+
+.dm-sidebar .conversation-menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.75rem;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dm-sidebar .conversation-menu-item:hover {
   background: var(--surface-soft);
 }
 
