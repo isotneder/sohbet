@@ -1532,6 +1532,13 @@ body::after {
   color: var(--text);
 }
 
+.search-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .search-action {
   padding: 6px 10px;
   border-radius: 999px;
@@ -1558,6 +1565,36 @@ body::after {
   font-size: 0.8rem;
   color: var(--muted);
   padding: 2px 2px 0;
+}
+
+.dm-sidebar .conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dm-sidebar .conversation-item .conversation-tab {
+  flex: 1;
+}
+
+.dm-sidebar .conversation-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.dm-sidebar .conversation-action {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dm-sidebar .conversation-action:hover {
+  background: var(--surface-soft);
 }
 
 .conversation-empty {

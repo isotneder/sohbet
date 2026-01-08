@@ -83,6 +83,8 @@
   let outgoingRequests = {};
   let pendingIncoming = new Set();
   let pendingOutgoing = new Set();
+  let blockedUsers = new Set();
+  let blockedByUsers = new Set();
   let lastSearchResults = [];
   let lastSearchQuery = "";
   let searchTimer = null;
@@ -486,6 +488,42 @@
     return `room_${pair[0]}_${pair[1]}`;
   }
 
+  function isPeerBlockedByMe(peerId) {
+    return !!peerId && blockedUsers.has(peerId);
+  }
+
+  function isPeerBlockingMe(peerId) {
+    return !!peerId && blockedByUsers.has(peerId);
+  }
+
+  function hasBlock(peerId) {
+    return isPeerBlockedByMe(peerId) || isPeerBlockingMe(peerId);
+  }
+
+  function buildRelationCleanup(updates, peerId) {
+    if (!peerId) return;
+    const roomId = getRoomId(currentUser.id, peerId);
+    updates[`userRooms/${currentUser.id}/${roomId}`] = null;
+    updates[`userRooms/${peerId}/${roomId}`] = null;
+    updates[`chatRequests/${currentUser.id}/${peerId}`] = null;
+    updates[`chatRequests/${peerId}/${currentUser.id}`] = null;
+    updates[`chatRequestsSent/${currentUser.id}/${peerId}`] = null;
+    updates[`chatRequestsSent/${peerId}/${currentUser.id}`] = null;
+  }
+
+  function resetConversationView() {
+    if (messagesRef) messagesRef.off();
+    if (typingRef) typingRef.off();
+    messagesRef = null;
+    typingRef = null;
+    currentRoomId = null;
+    currentPeerId = null;
+    pendingDecryptions.clear();
+    if (messagesDiv) messagesDiv.innerHTML = "";
+    if (typingIndicator) typingIndicator.textContent = "";
+    setHeader(null);
+  }
+
   function setHeader(peerId) {
     if (!headerTitle) return;
     if (!peerId) {
@@ -603,6 +641,10 @@
   async function sendMessage() {
     if (!messageInput) return;
     if (!ensureRoomSelected()) return;
+    if (hasBlock(currentPeerId)) {
+      showToast("Mesaj gonderemezsin. Engel var.");
+      return;
+    }
     if (!supportsCrypto) {
       alert("Bu tarayici sifreli sohbeti desteklemiyor.");
       return;
@@ -656,6 +698,10 @@
 
   async function sendImage(file) {
     if (!ensureRoomSelected()) return;
+    if (hasBlock(currentPeerId)) {
+      showToast("Fotograf gonderemezsin. Engel var.");
+      return;
+    }
     if (!supportsCrypto) {
       alert("Bu tarayici sifreli sohbeti desteklemiyor.");
       return;
@@ -712,6 +758,7 @@
 
   function setTyping(isTyping) {
     if (!typingRef) return;
+    if (hasBlock(currentPeerId)) return;
     typingRef.child(currentUser.id).set(isTyping);
   }
 
@@ -905,6 +952,10 @@
 
   async function openConversation(peerId) {
     if (!peerId) return;
+    if (hasBlock(peerId)) {
+      showToast("Sohbet acilamiyor. Engel var.");
+      return;
+    }
     const roomId = getRoomId(currentUser.id, peerId);
 
     const prevMessagesRef = messagesRef;
@@ -974,6 +1025,10 @@
     entries.forEach(([roomId, meta]) => {
       const otherId = meta && meta.otherId;
       if (!otherId) return;
+      if (hasBlock(otherId)) return;
+      const item = document.createElement("div");
+      item.className = "conversation-item";
+
       const button = document.createElement("button");
       button.type = "button";
       button.className = "conversation-tab";
@@ -983,15 +1038,117 @@
       button.addEventListener("click", () => {
         openConversation(otherId);
       });
-      conversationTabs.appendChild(button);
+
+      const actions = document.createElement("div");
+      actions.className = "conversation-actions";
+
+      const unfollowButton = document.createElement("button");
+      unfollowButton.type = "button";
+      unfollowButton.className = "conversation-action";
+      unfollowButton.textContent = "Takipten cik";
+      unfollowButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        unfollowUser(otherId);
+      });
+
+      const blockButton = document.createElement("button");
+      blockButton.type = "button";
+      blockButton.className = "conversation-action";
+      blockButton.textContent = "Engelle";
+      blockButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        blockUser(otherId);
+      });
+
+      actions.appendChild(unfollowButton);
+      actions.appendChild(blockButton);
+      item.appendChild(button);
+      item.appendChild(actions);
+      conversationTabs.appendChild(item);
     });
 
     highlightActiveConversation(currentRoomId);
   }
 
+  function unfollowUser(peerId) {
+    if (!peerId || peerId === currentUser.id) return;
+    const updates = {};
+    const roomId = getRoomId(currentUser.id, peerId);
+    updates[`userRooms/${currentUser.id}/${roomId}`] = null;
+    updates[`userRooms/${peerId}/${roomId}`] = null;
+    db.ref()
+      .update(updates)
+      .then(() => {
+        if (currentPeerId === peerId) {
+          resetConversationView();
+        }
+        showToast("Takipten cikildi.");
+      })
+      .catch((err) => {
+        console.error("unfollow error", err);
+        showToast("Takipten cikilamadi.");
+      });
+  }
+
+  function blockUser(peerId) {
+    if (!peerId || peerId === currentUser.id) return;
+    const now = Date.now();
+    const updates = {};
+    updates[`blocks/${currentUser.id}/${peerId}`] = { blockedAt: now };
+    updates[`blockedBy/${peerId}/${currentUser.id}`] = { blockedAt: now };
+    buildRelationCleanup(updates, peerId);
+    db.ref()
+      .update(updates)
+      .then(() => {
+        if (currentPeerId === peerId) {
+          resetConversationView();
+        }
+        showToast("Kullanici engellendi.");
+      })
+      .catch((err) => {
+        console.error("block error", err);
+        showToast("Engelleme basarisiz.");
+      });
+  }
+
+  function unblockUser(peerId) {
+    if (!peerId || peerId === currentUser.id) return;
+    const updates = {};
+    updates[`blocks/${currentUser.id}/${peerId}`] = null;
+    updates[`blockedBy/${peerId}/${currentUser.id}`] = null;
+    db.ref()
+      .update(updates)
+      .then(() => {
+        showToast("Engel kaldirildi.");
+      })
+      .catch((err) => {
+        console.error("unblock error", err);
+        showToast("Engel kaldirilamadi.");
+      });
+  }
+
   function setSearchSectionVisible(isVisible) {
     if (!searchSection) return;
     searchSection.style.display = isVisible ? "flex" : "none";
+  }
+
+  function createSearchAction(label, options) {
+    const opts = options || {};
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "search-action";
+    if (opts.primary) {
+      button.classList.add("is-primary");
+    }
+    if (opts.disabled) {
+      button.classList.add("is-disabled");
+      button.disabled = true;
+    }
+    if (typeof opts.onClick === "function") {
+      button.addEventListener("click", opts.onClick);
+    }
+    button.textContent = label;
+    return button;
   }
 
   function renderSearchResults(results, query) {
@@ -1026,32 +1183,63 @@
       nameEl.textContent = user.username || "Kullanici";
       item.appendChild(nameEl);
 
-      const actionButton = document.createElement("button");
-      actionButton.type = "button";
-      actionButton.className = "search-action";
+      const actions = document.createElement("div");
+      actions.className = "search-actions";
 
-      if (approvedPeers.has(user.id)) {
-        actionButton.textContent = "Sohbet ac";
-        actionButton.classList.add("is-primary");
-        actionButton.addEventListener("click", () => {
-          openConversation(user.id);
-        });
+      if (isPeerBlockingMe(user.id)) {
+        actions.appendChild(
+          createSearchAction("Seni engelledi", { disabled: true })
+        );
+      } else if (isPeerBlockedByMe(user.id)) {
+        actions.appendChild(
+          createSearchAction("Engeli kaldir", {
+            onClick: () => unblockUser(user.id),
+          })
+        );
+      } else if (approvedPeers.has(user.id)) {
+        actions.appendChild(
+          createSearchAction("Sohbet ac", {
+            primary: true,
+            onClick: () => openConversation(user.id),
+          })
+        );
+        actions.appendChild(
+          createSearchAction("Engelle", {
+            onClick: () => blockUser(user.id),
+          })
+        );
       } else if (pendingIncoming.has(user.id)) {
-        actionButton.textContent = "Istek bekliyor";
-        actionButton.classList.add("is-disabled");
-        actionButton.disabled = true;
+        actions.appendChild(
+          createSearchAction("Istek bekliyor", { disabled: true })
+        );
+        actions.appendChild(
+          createSearchAction("Engelle", {
+            onClick: () => blockUser(user.id),
+          })
+        );
       } else if (pendingOutgoing.has(user.id)) {
-        actionButton.textContent = "Istek gonderildi";
-        actionButton.classList.add("is-disabled");
-        actionButton.disabled = true;
+        actions.appendChild(
+          createSearchAction("Istek gonderildi", { disabled: true })
+        );
+        actions.appendChild(
+          createSearchAction("Engelle", {
+            onClick: () => blockUser(user.id),
+          })
+        );
       } else {
-        actionButton.textContent = "Istek gonder";
-        actionButton.addEventListener("click", () => {
-          sendChatRequest(user.id);
-        });
+        actions.appendChild(
+          createSearchAction("Istek gonder", {
+            onClick: () => sendChatRequest(user.id),
+          })
+        );
+        actions.appendChild(
+          createSearchAction("Engelle", {
+            onClick: () => blockUser(user.id),
+          })
+        );
       }
 
-      item.appendChild(actionButton);
+      item.appendChild(actions);
       searchResults.appendChild(item);
     });
   }
@@ -1107,8 +1295,17 @@
         declineChatRequest(fromId);
       });
 
+      const blockButton = document.createElement("button");
+      blockButton.type = "button";
+      blockButton.className = "request-button";
+      blockButton.textContent = "Engelle";
+      blockButton.addEventListener("click", () => {
+        blockUser(fromId);
+      });
+
       actions.appendChild(acceptButton);
       actions.appendChild(declineButton);
+      actions.appendChild(blockButton);
       card.appendChild(nameEl);
       card.appendChild(metaEl);
       card.appendChild(actions);
@@ -1194,6 +1391,14 @@
       showToast("Zaten takiptesin.");
       return;
     }
+    if (isPeerBlockedByMe(targetId)) {
+      showToast("Engelledigin kullaniciya istek gonderemezsin.");
+      return;
+    }
+    if (isPeerBlockingMe(targetId)) {
+      showToast("Bu kullanici seni engelledi.");
+      return;
+    }
     if (pendingIncoming.has(targetId)) {
       showToast("Bu kullanicidan istek var.");
       return;
@@ -1229,6 +1434,10 @@
 
   function approveChatRequest(fromId) {
     if (!fromId) return;
+    if (hasBlock(fromId)) {
+      showToast("Engel varken istek onaylanamaz.");
+      return;
+    }
     const now = Date.now();
     const roomId = getRoomId(currentUser.id, fromId);
     const updates = {};
@@ -1343,6 +1552,30 @@
       outgoingRequests = snapshot.val() || {};
       pendingOutgoing = new Set(Object.keys(outgoingRequests));
       renderSearchResults(lastSearchResults, lastSearchQuery);
+    });
+
+  db.ref("blocks")
+    .child(currentUser.id)
+    .on("value", (snapshot) => {
+      const data = snapshot.val() || {};
+      blockedUsers = new Set(Object.keys(data));
+      renderSearchResults(lastSearchResults, lastSearchQuery);
+      if (currentPeerId && blockedUsers.has(currentPeerId)) {
+        showToast("Kullanici engellendi.");
+        resetConversationView();
+      }
+    });
+
+  db.ref("blockedBy")
+    .child(currentUser.id)
+    .on("value", (snapshot) => {
+      const data = snapshot.val() || {};
+      blockedByUsers = new Set(Object.keys(data));
+      renderSearchResults(lastSearchResults, lastSearchQuery);
+      if (currentPeerId && blockedByUsers.has(currentPeerId)) {
+        showToast("Bu kullanici seni engelledi.");
+        resetConversationView();
+      }
     });
 
   db.ref("userRooms")
