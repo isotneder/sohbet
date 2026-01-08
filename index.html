@@ -124,6 +124,47 @@
           return "";
         }
 
+        function getLegacyDisplayName(userKey) {
+          return (
+            (displayNamesCache && displayNamesCache[userKey]) ||
+            fallbackNames[userKey] ||
+            userKey
+          );
+        }
+
+        function resolveUserLogin(username) {
+          var target = normalizeName(username);
+          if (!target) return Promise.resolve(null);
+          return db
+            .ref("usernames")
+            .child(target)
+            .once("value")
+            .then(function (snapshot) {
+              var uid = snapshot.val();
+              if (uid) {
+                return db
+                  .ref("users")
+                  .child(uid)
+                  .once("value")
+                  .then(function (userSnap) {
+                    var user = userSnap.val() || {};
+                    return {
+                      id: uid,
+                      username: user.username || username,
+                      isLegacy: false,
+                    };
+                  });
+              }
+              var legacyKey = findUserKeyByName(username);
+              if (!legacyKey) return null;
+              return {
+                id: legacyKey,
+                username: getLegacyDisplayName(legacyKey) || username,
+                isLegacy: true,
+              };
+            });
+        }
+
         function isStrongPassword(value) {
           var password = (value || "").toString();
           if (password.length < 8) return false;
@@ -246,80 +287,103 @@
               return;
             }
 
-            var userKey = findUserKeyByName(username);
-            if (!userKey) {
-              setError("Kullanici bulunamadi.");
-              return;
-            }
-
             var password = (passwordInput && passwordInput.value.trim()) || "";
             if (!password) {
               setError("Sifre gir.");
               return;
             }
 
-            db.ref("passwords")
-              .child(userKey)
-              .once("value")
-              .then(function (snapshot) {
-                var currentPassword = snapshot.val();
-                if (!currentPassword) {
-                  if (userKey === "user1") {
-                    if (!supportsCrypto) {
-                      setError("Bu tarayici sifreyi olusturamiyor.");
-                      return;
-                    }
-                    if (!isStrongPassword(password)) {
-                      setError(
-                        "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli."
-                      );
-                      return;
-                    }
-                    return derivePasswordHash(password).then(function (passwordHash) {
-                      if (!passwordHash) {
-                        setError("Sifre olusturulamadi.");
-                        return;
-                      }
-                      return db
-                        .ref("passwords")
-                        .child(userKey)
-                        .set(passwordHash)
-                        .then(function () {
-                          sessionStorage.setItem(
-                            "chatAuthOk_" + userKey,
-                            "true"
+            resolveUserLogin(username)
+              .then(function (user) {
+                if (!user || !user.id) {
+                  setError("Kullanici bulunamadi.");
+                  return null;
+                }
+
+                var userKey = user.id;
+                var displayName = user.username || username;
+
+                return db
+                  .ref("passwords")
+                  .child(userKey)
+                  .once("value")
+                  .then(function (snapshot) {
+                    var currentPassword = snapshot.val();
+                    if (!currentPassword) {
+                      if (user.isLegacy && userKey === "user1") {
+                        if (!supportsCrypto) {
+                          setError("Bu tarayici sifreyi olusturamiyor.");
+                          return null;
+                        }
+                        if (!isStrongPassword(password)) {
+                          setError(
+                            "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli."
                           );
-                          window.location.href = userKey + ".html";
+                          return null;
+                        }
+                        return derivePasswordHash(password).then(function (
+                          passwordHash
+                        ) {
+                          if (!passwordHash) {
+                            setError("Sifre olusturulamadi.");
+                            return null;
+                          }
+                          return db
+                            .ref("passwords")
+                            .child(userKey)
+                            .set(passwordHash)
+                            .then(function () {
+                              sessionStorage.setItem(
+                                "chatAuthOk_" + userKey,
+                                "true"
+                              );
+                              sessionStorage.setItem("chat_uid", userKey);
+                              sessionStorage.setItem(
+                                "chat_username",
+                                displayName
+                              );
+                              window.location.href = "chat.html";
+                            });
                         });
-                    });
-                  }
-                  setError("Bu kullanici icin sifre ayarlanmamis.");
-                  return;
-                }
-                if (typeof currentPassword !== "string" && !supportsCrypto) {
-                  setError("Bu tarayici sifreyi dogrulayamiyor.");
-                  return;
-                }
-                return verifyPassword(password, currentPassword).then(function (ok) {
-                  if (ok) {
-                    var finishLogin = function () {
-                      sessionStorage.setItem("chatAuthOk_" + userKey, "true");
-                      window.location.href = userKey + ".html";
-                    };
-                    if (typeof currentPassword === "string") {
-                      return maybeUpgradeLegacyPassword(
-                        userKey,
-                        password,
-                        currentPassword
-                      ).then(function () {
-                        finishLogin();
-                      });
+                      }
+                      setError("Bu kullanici icin sifre ayarlanmamis.");
+                      return null;
                     }
-                    finishLogin();
-                  } else {
-                    setError("Sifre yanlis.");
-                  }
-                });
+                    if (typeof currentPassword !== "string" && !supportsCrypto) {
+                      setError("Bu tarayici sifreyi dogrulayamiyor.");
+                      return null;
+                    }
+                    return verifyPassword(password, currentPassword).then(
+                      function (ok) {
+                        if (ok) {
+                          var finishLogin = function () {
+                            sessionStorage.setItem(
+                              "chatAuthOk_" + userKey,
+                              "true"
+                            );
+                            sessionStorage.setItem("chat_uid", userKey);
+                            sessionStorage.setItem(
+                              "chat_username",
+                              displayName
+                            );
+                            window.location.href = "chat.html";
+                          };
+                          if (typeof currentPassword === "string") {
+                            return maybeUpgradeLegacyPassword(
+                              userKey,
+                              password,
+                              currentPassword
+                            ).then(function () {
+                              finishLogin();
+                            });
+                          }
+                          finishLogin();
+                        } else {
+                          setError("Sifre yanlis.");
+                        }
+                      }
+                    );
+                  });
               })
               .catch(function (err) {
                 console.error("login error", err);

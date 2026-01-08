@@ -216,25 +216,10 @@
   }
 
   function updateSecurityBadge() {
-    const badge = getSecurityBadge();
-    if (!badge) return;
-    if (!supportsCrypto) {
-      badge.textContent = "E2EE off";
-      badge.className = "security-badge is-off";
-      return;
+    const badge = document.getElementById("securityBadge");
+    if (badge && badge.parentNode) {
+      badge.parentNode.removeChild(badge);
     }
-    if (!encryptionState.my) {
-      badge.textContent = "E2EE init";
-      badge.className = "security-badge is-warn";
-      return;
-    }
-    if (!encryptionState.peer || !encryptionState.peer.publicRaw) {
-      badge.textContent = "E2EE waiting";
-      badge.className = "security-badge is-warn";
-      return;
-    }
-    badge.textContent = "E2EE ready";
-    badge.className = "security-badge is-on";
   }
 
   function updateEncryptionState() {
@@ -782,6 +767,22 @@
     });
   }
 
+  function markMessageRead(key, msg) {
+    if (!currentRoomId || !key || !msg) return;
+    if (!msg.fromId || msg.fromId === currentUser.id) return;
+    if (msg.readBy && msg.readBy[currentUser.id]) return;
+    db.ref("conversations")
+      .child(currentRoomId)
+      .child("messages")
+      .child(key)
+      .child("readBy")
+      .child(currentUser.id)
+      .set(Date.now())
+      .catch((err) => {
+        console.error("read receipt error", err);
+      });
+  }
+
   function renderMessage(key, msg) {
     if (!messagesDiv) return;
 
@@ -807,6 +808,14 @@
     });
     const senderName = getMessageSenderName(msg);
     metaEl.textContent = `${senderName} - ${timeStr}`;
+    if (isMe) {
+      const statusEl = document.createElement("span");
+      const isSeen =
+        currentPeerId && msg.readBy && msg.readBy[currentPeerId];
+      statusEl.classList.add("message-status", isSeen ? "seen" : "sent");
+      statusEl.textContent = isSeen ? "Okundu" : "Gonderildi";
+      metaEl.appendChild(statusEl);
+    }
 
     const contentEl = document.createElement("div");
 
@@ -833,6 +842,10 @@
     messageEl.innerHTML = "";
     messageEl.appendChild(metaEl);
     messageEl.appendChild(contentEl);
+
+    if (!isMe) {
+      markMessageRead(key, msg);
+    }
 
     if (isNew) {
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
