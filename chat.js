@@ -995,7 +995,8 @@
       startY = clientY;
       currentX = 0;
       swiping = false;
-      messageEl.style.transition = "";
+      messageEl.style.transition = "none";
+      messageEl.classList.remove("is-dragging");
     };
 
     const moveSwipe = (clientX, clientY, event) => {
@@ -1011,6 +1012,7 @@
         }
         swiping = true;
         messageEl.style.userSelect = "none";
+        messageEl.classList.add("is-dragging");
       }
 
       if (event && event.cancelable) {
@@ -1028,6 +1030,7 @@
       messageEl.style.transition = "transform 0.2s ease";
       messageEl.style.transform = "";
       messageEl.style.userSelect = "";
+      messageEl.classList.remove("is-dragging");
       swiping = false;
       currentX = 0;
       if (shouldReply) {
