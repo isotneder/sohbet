@@ -55,6 +55,9 @@
   const messageInput = document.getElementById("messageInput");
   const sendButton = document.getElementById("sendButton");
   const conversationEmpty = document.getElementById("conversationEmpty");
+  const searchSection = document.getElementById("searchSection");
+  const searchResults = document.getElementById("searchResults");
+  const requestList = document.getElementById("requestList");
 
   const viewerOverlay = document.getElementById("viewerOverlay");
   const viewerImage = document.getElementById("viewerImage");
@@ -75,13 +78,24 @@
   let messagesRef = null;
   let typingRef = null;
   let typingTimeout = null;
+  let approvedPeers = new Set();
+  let incomingRequests = {};
+  let outgoingRequests = {};
+  let pendingIncoming = new Set();
+  let pendingOutgoing = new Set();
+  let lastSearchResults = [];
+  let lastSearchQuery = "";
+  let searchTimer = null;
+  let searchRequestId = 0;
 
   function normalizeName(value) {
     return (value || "").toString().trim().toLowerCase();
   }
 
   function isValidUsername(value) {
-    return /^[a-zA-Z0-9_]{3,20}$/.test(value || "");
+    return /^[A-Za-z0-9_\u00C7\u011E\u0130\u00D6\u015E\u00DC\u00E7\u011F\u0131\u00F6\u015F\u00FC]{3,20}$/.test(
+      value || ""
+    );
   }
 
   function bufferToBase64(buffer) {
@@ -962,56 +976,302 @@
     highlightActiveConversation(currentRoomId);
   }
 
-  function startChatByUsername() {
-    if (!searchInput) return;
-    const username = searchInput.value.trim();
-    if (!username) {
-      showToast("Kullanici adi gir.");
+  function setSearchSectionVisible(isVisible) {
+    if (!searchSection) return;
+    searchSection.style.display = isVisible ? "flex" : "none";
+  }
+
+  function renderSearchResults(results, query) {
+    if (!searchResults) return;
+    if (!query) {
+      searchResults.innerHTML = "";
+      setSearchSectionVisible(false);
       return;
     }
-    if (!isValidUsername(username)) {
-      showToast("Kullanici adi 3-20 karakter, harf/rakam/_ olmali.");
+
+    setSearchSectionVisible(true);
+    searchResults.innerHTML = "";
+    const list = results || [];
+    const filtered = list.filter(
+      (user) => user && user.id && user.id !== currentUser.id
+    );
+
+    if (!filtered.length) {
+      const empty = document.createElement("div");
+      empty.className = "search-empty";
+      empty.textContent = "Sonuc bulunamadi.";
+      searchResults.appendChild(empty);
       return;
     }
-    const target = normalizeName(username);
-    db.ref("usernames")
-      .child(target)
+
+    filtered.forEach((user) => {
+      const item = document.createElement("div");
+      item.className = "search-item";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "search-name";
+      nameEl.textContent = user.username || "Kullanici";
+      item.appendChild(nameEl);
+
+      const actionButton = document.createElement("button");
+      actionButton.type = "button";
+      actionButton.className = "search-action";
+
+      if (approvedPeers.has(user.id)) {
+        actionButton.textContent = "Sohbet ac";
+        actionButton.classList.add("is-primary");
+        actionButton.addEventListener("click", () => {
+          openConversation(user.id);
+        });
+      } else if (pendingIncoming.has(user.id)) {
+        actionButton.textContent = "Istek bekliyor";
+        actionButton.classList.add("is-disabled");
+        actionButton.disabled = true;
+      } else if (pendingOutgoing.has(user.id)) {
+        actionButton.textContent = "Istek gonderildi";
+        actionButton.classList.add("is-disabled");
+        actionButton.disabled = true;
+      } else {
+        actionButton.textContent = "Istek gonder";
+        actionButton.addEventListener("click", () => {
+          sendChatRequest(user.id);
+        });
+      }
+
+      item.appendChild(actionButton);
+      searchResults.appendChild(item);
+    });
+  }
+
+  function renderRequestList(requests) {
+    if (!requestList) return;
+    requestList.innerHTML = "";
+    const entries = Object.entries(requests || {});
+
+    if (!entries.length) {
+      const empty = document.createElement("div");
+      empty.className = "request-empty";
+      empty.textContent = "Istek yok.";
+      requestList.appendChild(empty);
+      return;
+    }
+
+    entries.sort((a, b) => {
+      const aTime = (a[1] && a[1].createdAt) || 0;
+      const bTime = (b[1] && b[1].createdAt) || 0;
+      return bTime - aTime;
+    });
+
+    entries.forEach(([fromId]) => {
+      if (!fromId) return;
+      const card = document.createElement("div");
+      card.className = "request-card";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "request-name";
+      nameEl.textContent = getUserNameById(fromId);
+
+      const metaEl = document.createElement("div");
+      metaEl.className = "request-meta";
+      metaEl.textContent = "Takip istegi";
+
+      const actions = document.createElement("div");
+      actions.className = "request-actions";
+
+      const acceptButton = document.createElement("button");
+      acceptButton.type = "button";
+      acceptButton.className = "request-button";
+      acceptButton.textContent = "Onayla";
+      acceptButton.addEventListener("click", () => {
+        approveChatRequest(fromId);
+      });
+
+      const declineButton = document.createElement("button");
+      declineButton.type = "button";
+      declineButton.className = "request-button";
+      declineButton.textContent = "Reddet";
+      declineButton.addEventListener("click", () => {
+        declineChatRequest(fromId);
+      });
+
+      actions.appendChild(acceptButton);
+      actions.appendChild(declineButton);
+      card.appendChild(nameEl);
+      card.appendChild(metaEl);
+      card.appendChild(actions);
+      requestList.appendChild(card);
+    });
+  }
+
+  function fetchUsersByQuery(query) {
+    if (!query) return Promise.resolve([]);
+    return db
+      .ref("users")
+      .orderByChild("usernameLower")
+      .startAt(query)
+      .endAt(query + "\uf8ff")
+      .limitToFirst(12)
       .once("value")
-      .then(async (snapshot) => {
-        const peerId = snapshot.val();
-        if (!peerId) {
-          showToast("Kullanici bulunamadi.");
-          return;
-        }
-        if (peerId === currentUser.id) {
-          showToast("Kendi hesabinla sohbet acamazsin.");
-          return;
-        }
-        const roomId = getRoomId(currentUser.id, peerId);
-        updateRoomMetadata(roomId, peerId, Date.now());
-        await loadUserProfile(peerId);
-        renderConversationList(
-          (await db.ref("userRooms").child(currentUser.id).once("value")).val() ||
-            {}
-        );
-        openConversation(peerId);
-        searchInput.value = "";
-      })
-      .catch((err) => {
-        console.error("user lookup error", err);
-        showToast("Kullanici bulunamadi.");
+      .then((snapshot) => {
+        const results = [];
+        snapshot.forEach((child) => {
+          const val = child.val();
+          if (!val) return;
+          const record = {
+            id: child.key,
+            username: val.username || "",
+            usernameLower: val.usernameLower || "",
+          };
+          results.push(record);
+          userProfiles.set(child.key, val);
+        });
+        return results;
       });
   }
 
+  function performSearch() {
+    if (!searchInput) return;
+    const rawQuery = searchInput.value.trim();
+    if (!rawQuery) {
+      lastSearchResults = [];
+      lastSearchQuery = "";
+      renderSearchResults([], "");
+      return;
+    }
+
+    const query = normalizeName(rawQuery);
+    if (!query) {
+      lastSearchResults = [];
+      lastSearchQuery = "";
+      renderSearchResults([], "");
+      return;
+    }
+
+    const requestId = ++searchRequestId;
+    fetchUsersByQuery(query)
+      .then((results) => {
+        if (requestId !== searchRequestId) return;
+        lastSearchResults = results || [];
+        lastSearchQuery = rawQuery;
+        renderSearchResults(lastSearchResults, rawQuery);
+      })
+      .catch((err) => {
+        console.error("user search error", err);
+        showToast("Arama yapilamadi.");
+      });
+  }
+
+  function scheduleSearch() {
+    if (!searchInput) return;
+    if (searchTimer) clearTimeout(searchTimer);
+    if (!searchInput.value.trim()) {
+      lastSearchResults = [];
+      lastSearchQuery = "";
+      renderSearchResults([], "");
+      return;
+    }
+    searchTimer = setTimeout(() => {
+      performSearch();
+    }, 250);
+  }
+
+  function sendChatRequest(targetId) {
+    if (!targetId || targetId === currentUser.id) return;
+    if (approvedPeers.has(targetId)) {
+      showToast("Zaten takiptesin.");
+      return;
+    }
+    if (pendingIncoming.has(targetId)) {
+      showToast("Bu kullanicidan istek var.");
+      return;
+    }
+    if (pendingOutgoing.has(targetId)) {
+      showToast("Istek zaten gonderildi.");
+      return;
+    }
+    const now = Date.now();
+    const updates = {};
+    updates[`chatRequests/${targetId}/${currentUser.id}`] = {
+      fromId: currentUser.id,
+      createdAt: now,
+    };
+    updates[`chatRequestsSent/${currentUser.id}/${targetId}`] = {
+      toId: targetId,
+      createdAt: now,
+    };
+    pendingOutgoing.add(targetId);
+    renderSearchResults(lastSearchResults, lastSearchQuery);
+    db.ref()
+      .update(updates)
+      .then(() => {
+        showToast("Istek gonderildi.");
+      })
+      .catch((err) => {
+        console.error("request send error", err);
+        pendingOutgoing.delete(targetId);
+        renderSearchResults(lastSearchResults, lastSearchQuery);
+        showToast("Istek gonderilemedi.");
+      });
+  }
+
+  function approveChatRequest(fromId) {
+    if (!fromId) return;
+    const now = Date.now();
+    const roomId = getRoomId(currentUser.id, fromId);
+    const updates = {};
+    updates[`chatRequests/${currentUser.id}/${fromId}`] = null;
+    updates[`chatRequestsSent/${fromId}/${currentUser.id}`] = null;
+    updates[`chatRequests/${fromId}/${currentUser.id}`] = null;
+    updates[`chatRequestsSent/${currentUser.id}/${fromId}`] = null;
+    updates[`userRooms/${currentUser.id}/${roomId}`] = {
+      otherId: fromId,
+      updatedAt: now,
+    };
+    updates[`userRooms/${fromId}/${roomId}`] = {
+      otherId: currentUser.id,
+      updatedAt: now,
+    };
+    db.ref()
+      .update(updates)
+      .then(() => {
+        showToast("Istek onaylandi.");
+      })
+      .catch((err) => {
+        console.error("request approve error", err);
+        showToast("Istek onaylanamadi.");
+      });
+  }
+
+  function declineChatRequest(fromId) {
+    if (!fromId) return;
+    const updates = {};
+    updates[`chatRequests/${currentUser.id}/${fromId}`] = null;
+    updates[`chatRequestsSent/${fromId}/${currentUser.id}`] = null;
+    updates[`chatRequests/${fromId}/${currentUser.id}`] = null;
+    updates[`chatRequestsSent/${currentUser.id}/${fromId}`] = null;
+    db.ref()
+      .update(updates)
+      .then(() => {
+        showToast("Istek reddedildi.");
+      })
+      .catch((err) => {
+        console.error("request decline error", err);
+        showToast("Istek reddedilemedi.");
+      });
+  }
+
+  setSearchSectionVisible(false);
+
   if (startChatButton) {
-    startChatButton.addEventListener("click", startChatByUsername);
+    startChatButton.addEventListener("click", performSearch);
   }
 
   if (searchInput) {
+    searchInput.addEventListener("input", scheduleSearch);
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        startChatByUsername();
+        performSearch();
       }
     });
   }
@@ -1053,6 +1313,25 @@
     });
   }
 
+  db.ref("chatRequests")
+    .child(currentUser.id)
+    .on("value", async (snapshot) => {
+      incomingRequests = snapshot.val() || {};
+      pendingIncoming = new Set(Object.keys(incomingRequests));
+      const requesters = Object.keys(incomingRequests);
+      await Promise.all(requesters.map((peerId) => loadUserProfile(peerId)));
+      renderRequestList(incomingRequests);
+      renderSearchResults(lastSearchResults, lastSearchQuery);
+    });
+
+  db.ref("chatRequestsSent")
+    .child(currentUser.id)
+    .on("value", (snapshot) => {
+      outgoingRequests = snapshot.val() || {};
+      pendingOutgoing = new Set(Object.keys(outgoingRequests));
+      renderSearchResults(lastSearchResults, lastSearchQuery);
+    });
+
   db.ref("userRooms")
     .child(currentUser.id)
     .on("value", async (snapshot) => {
@@ -1060,8 +1339,10 @@
       const peers = Object.values(rooms)
         .map((item) => item && item.otherId)
         .filter(Boolean);
+      approvedPeers = new Set(peers);
       await Promise.all(peers.map((peerId) => loadUserProfile(peerId)));
       renderConversationList(rooms);
+      renderSearchResults(lastSearchResults, lastSearchQuery);
       if (!currentRoomId && peers.length) {
         openConversation(peers[0]);
       } else if (!peers.length) {

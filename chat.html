@@ -30,7 +30,38 @@
               placeholder="Kullanici adi"
               autocomplete="off"
             />
-            <button id="startChatButton" type="button">Baslat</button>
+            <button id="startChatButton" type="button" aria-label="Ara">
+              <svg
+                class="search-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="7"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M16.65 16.65L21 21"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+          <div id="searchSection" class="dm-section">
+            <div class="dm-section-title">Arama Sonuclari</div>
+            <div id="searchResults" class="search-results"></div>
+          </div>
+          <div class="dm-section">
+            <div class="dm-section-title">Istekler</div>
+            <div id="requestList" class="request-list"></div>
           </div>
           <div id="conversationTabs" class="conversation-tabs"></div>
           <div id="conversationEmpty" class="conversation-empty">

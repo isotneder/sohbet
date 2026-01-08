@@ -168,7 +168,9 @@
         }
 
         function isValidUsername(value) {
-          return /^[a-zA-Z0-9_]{3,20}$/.test(value || "");
+          return /^[A-Za-z0-9_\u00C7\u011E\u0130\u00D6\u015E\u00DC\u00E7\u011F\u0131\u00F6\u015F\u00FC]{3,20}$/.test(
+            value || ""
+          );
         }
 
         function isValidEmail(value) {
