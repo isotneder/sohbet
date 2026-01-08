@@ -991,15 +991,56 @@
     const threshold = 60;
     const maxTranslate = 70;
 
+    const startSwipe = (clientX, clientY) => {
+      startX = clientX;
+      startY = clientY;
+      currentX = 0;
+      swiping = false;
+      messageEl.style.transition = "";
+    };
+
+    const moveSwipe = (clientX, clientY, event) => {
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      if (!swiping) {
+        if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) {
+          return;
+        }
+        if (Math.sign(dx) !== direction) {
+          return;
+        }
+        swiping = true;
+        messageEl.style.userSelect = "none";
+      }
+
+      if (event && event.cancelable) {
+        event.preventDefault();
+      }
+      const translate = Math.min(maxTranslate, Math.abs(dx));
+      currentX = dx;
+      messageEl.style.transform = `translateX(${direction * translate}px)`;
+    };
+
+    const endSwipe = () => {
+      if (!swiping) return;
+      const shouldReply =
+        Math.abs(currentX) >= threshold && Math.sign(currentX) === direction;
+      messageEl.style.transition = "transform 0.2s ease";
+      messageEl.style.transform = "";
+      messageEl.style.userSelect = "";
+      swiping = false;
+      currentX = 0;
+      if (shouldReply) {
+        setReplyTarget(messageKey, msg);
+      }
+    };
+
     messageEl.addEventListener(
       "touchstart",
       (event) => {
         if (event.touches.length !== 1) return;
-        startX = event.touches[0].clientX;
-        startY = event.touches[0].clientY;
-        currentX = 0;
-        swiping = false;
-        messageEl.style.transition = "";
+        startSwipe(event.touches[0].clientX, event.touches[0].clientY);
       },
       { passive: true }
     );
@@ -1008,42 +1049,30 @@
       "touchmove",
       (event) => {
         if (event.touches.length !== 1) return;
-        const dx = event.touches[0].clientX - startX;
-        const dy = event.touches[0].clientY - startY;
-
-        if (!swiping) {
-          if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) {
-            return;
-          }
-          if (Math.sign(dx) !== direction) {
-            return;
-          }
-          swiping = true;
-        }
-
-        event.preventDefault();
-        const translate = Math.min(maxTranslate, Math.abs(dx));
-        currentX = dx;
-        messageEl.style.transform = `translateX(${direction * translate}px)`;
+        moveSwipe(event.touches[0].clientX, event.touches[0].clientY, event);
       },
       { passive: false }
     );
 
-    const endSwipe = () => {
-      if (!swiping) return;
-      const shouldReply =
-        Math.abs(currentX) >= threshold && Math.sign(currentX) === direction;
-      messageEl.style.transition = "transform 0.2s ease";
-      messageEl.style.transform = "";
-      swiping = false;
-      currentX = 0;
-      if (shouldReply) {
-        setReplyTarget(messageKey, msg);
-      }
-    };
-
     messageEl.addEventListener("touchend", endSwipe, { passive: true });
     messageEl.addEventListener("touchcancel", endSwipe, { passive: true });
+
+    const handleMouseMove = (event) => {
+      moveSwipe(event.clientX, event.clientY, event);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      endSwipe();
+    };
+
+    messageEl.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      startSwipe(event.clientX, event.clientY);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    });
   }
 
   function markMessageRead(key, msg) {
