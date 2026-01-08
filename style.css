@@ -58,6 +58,27 @@ body {
   gap: 8px;
 }
 
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.chat-header-actions .security-badge {
+  margin-left: 0;
+}
+
+.home-badge {
+  cursor: pointer;
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+.home-badge:hover {
+  background: var(--surface-soft);
+}
+
 .chat-header-clear {
   padding: 4px 10px;
   border-radius: 999px;
@@ -371,7 +392,8 @@ body {
 }
 
 .message-status.seen {
-  color: #60a5fa;
+  color: var(--accent-2, #38bdf8);
+  opacity: 1;
 }
 
 .tick-icon {
@@ -1971,6 +1993,23 @@ body::after {
   gap: 6px;
   padding: 16px;
   min-height: 0;
+}
+
+.chat-container--dm.is-home .dm-thread {
+  display: none;
+}
+
+.chat-container--dm.is-home .dm-sidebar {
+  width: 100%;
+  border-right: none;
+}
+
+.chat-container--dm.is-home .chat-footer {
+  display: none;
+}
+
+.chat-container--dm.is-thread .dm-sidebar {
+  display: none;
 }
 
 .dm-thread .messages {

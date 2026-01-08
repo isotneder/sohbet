@@ -48,9 +48,11 @@
   const messagesDiv = document.getElementById("messages");
   const typingIndicator = document.getElementById("typingIndicator");
   const headerTitle = document.querySelector(".chat-header h1");
+  const chatContainer = document.querySelector(".chat-container--dm");
   const conversationTabs = document.getElementById("conversationTabs");
   const searchInput = document.getElementById("searchInput");
   const startChatButton = document.getElementById("startChatButton");
+  const homeButton = document.getElementById("homeButton");
   const logoutButton = document.getElementById("logoutButton");
   const imageButton = document.getElementById("imageButton");
   const imageInput = document.getElementById("imageInput");
@@ -156,6 +158,15 @@
     toastTimer = setTimeout(() => {
       toast.classList.remove("toast--visible");
     }, 3000);
+  }
+
+  function setHomeView(isHome) {
+    if (!chatContainer) return;
+    chatContainer.classList.toggle("is-home", isHome);
+    chatContainer.classList.toggle("is-thread", !isHome);
+    if (homeButton) {
+      homeButton.classList.toggle("hidden", isHome);
+    }
   }
 
   function getHiddenMessageMap() {
@@ -576,6 +587,7 @@
     clearReplyTarget();
     if (messagesDiv) messagesDiv.innerHTML = "";
     if (typingIndicator) typingIndicator.textContent = "";
+    setHomeView(true);
     setHeader(null);
   }
 
@@ -1343,6 +1355,7 @@
       showToast("Sohbet acilamiyor. Engel var.");
       return;
     }
+    setHomeView(false);
     clearReplyTarget();
     const roomId = getRoomId(currentUser.id, peerId);
 
@@ -1924,6 +1937,12 @@
     closeAllConversationMenus();
   });
 
+  if (homeButton) {
+    homeButton.addEventListener("click", () => {
+      resetConversationView();
+    });
+  }
+
   if (logoutButton) {
     logoutButton.addEventListener("click", () => {
       sessionStorage.removeItem("chat_uid");
@@ -2015,9 +2034,8 @@
       await Promise.all(peers.map((peerId) => loadUserProfile(peerId)));
       renderConversationList(rooms);
       renderSearchResults(lastSearchResults, lastSearchQuery);
-      if (!currentRoomId && peers.length) {
-        openConversation(peers[0]);
-      } else if (!peers.length) {
+      if (!currentRoomId) {
+        setHomeView(true);
         setHeader(null);
       }
     });
@@ -2025,5 +2043,6 @@
   setupNotificationHandlers();
   updateSecurityBadge();
   loadOrCreateKeyPair();
+  setHomeView(true);
   setHeader(null);
 })();
