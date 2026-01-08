@@ -982,8 +982,7 @@
     if (messageEl.dataset.replySwipe === "true") return;
     messageEl.dataset.replySwipe = "true";
 
-    const isMe = isMessageFromMe(msg);
-    const direction = isMe ? -1 : 1;
+    const direction = -1;
     let startX = 0;
     let startY = 0;
     let currentX = 0;
