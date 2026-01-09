@@ -72,8 +72,8 @@
   const viewerClose = document.getElementById("viewerClose");
 
   const notificationPayloadDefaults = {
-    sound: "/assets/sounds/notification.mp3",
-    icon: "/assets/icons/app-icon.png",
+    sound: "notification.mp3",
+    icon: "logo.png",
   };
 
   const userProfiles = new Map();
