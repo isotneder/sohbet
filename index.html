@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sohbet Giris</title>
+    <title>Sohbet Giriş</title>
     <link rel="icon" type="image/png" href="logo.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -12,9 +12,9 @@
       <header class="entry-header">
         <img src="logo.png" alt="Logo" class="entry-logo" />
         <div>
-          <h1>Sohbet Giris</h1>
+          <h1>Sohbet Giriş</h1>
           <p class="entry-subtitle">
-            Kullanici adını yaz, şifrenle gir.
+            Kullanıcı adını yaz, şifrenle gir.
           </p>
         </div>
       </header>
@@ -33,7 +33,7 @@
         </div>
 
         <div class="entry-field">
-          <label class="entry-label" for="passwordInput">Sifre</label>
+          <label class="entry-label" for="passwordInput">Şifre</label>
           <input
             type="password"
             id="passwordInput"
@@ -46,13 +46,13 @@
         </div>
 
         <button id="loginButton" class="entry-button" type="submit">
-          Giris yap
+          Giriş yap
         </button>
         <div id="loginError" class="entry-error"></div>
       </form>
 
       <p class="entry-note">
-        Hesabınız yoksa <a class="entry-link" href="create.html">olusturun</a>.
+        Hesabınız yoksa <a class="entry-link" href="create.html">oluşturun</a>.
       </p>
 
       <p class="entry-note">
@@ -283,20 +283,20 @@
 
             var username = (usernameInput && usernameInput.value.trim()) || "";
             if (!username) {
-              setError("Kullanici adi gir.");
+              setError("Kullanıcı adı gir.");
               return;
             }
 
             var password = (passwordInput && passwordInput.value.trim()) || "";
             if (!password) {
-              setError("Sifre gir.");
+              setError("Şifre gir.");
               return;
             }
 
             resolveUserLogin(username)
               .then(function (user) {
                 if (!user || !user.id) {
-                  setError("Kullanici bulunamadi.");
+                  setError("Kullanıcı bulunamadı.");
                   return null;
                 }
 
@@ -312,12 +312,12 @@
                     if (!currentPassword) {
                       if (user.isLegacy && userKey === "user1") {
                         if (!supportsCrypto) {
-                          setError("Bu tarayici sifreyi olusturamiyor.");
+                          setError("Bu tarayıcı şifreyi oluşturamıyor.");
                           return null;
                         }
                         if (!isStrongPassword(password)) {
                           setError(
-                            "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli."
+                            "Şifre en az 8 karakter, büyük/küçük harf, rakam ve sembol içermeli."
                           );
                           return null;
                         }
@@ -325,7 +325,7 @@
                           passwordHash
                         ) {
                           if (!passwordHash) {
-                            setError("Sifre olusturulamadi.");
+                            setError("Şifre oluşturulamadı.");
                             return null;
                           }
                           return db
@@ -346,11 +346,11 @@
                             });
                         });
                       }
-                      setError("Bu kullanici icin sifre ayarlanmamis.");
+                      setError("Bu kullanıcı için şifre ayarlanmamış.");
                       return null;
                     }
                     if (typeof currentPassword !== "string" && !supportsCrypto) {
-                      setError("Bu tarayici sifreyi dogrulayamiyor.");
+                      setError("Bu tarayıcı şifreyi doğrulayamıyor.");
                       return null;
                     }
                     return verifyPassword(password, currentPassword).then(
@@ -379,7 +379,7 @@
                           }
                           finishLogin();
                         } else {
-                          setError("Sifre yanlis.");
+                          setError("Şifre yanlış.");
                         }
                       }
                     );
@@ -387,7 +387,7 @@
               })
               .catch(function (err) {
                 console.error("login error", err);
-                setError("Giris yapilamadi.");
+                setError("Giriş yapılamadı.");
               });
           });
         }

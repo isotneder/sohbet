@@ -14,19 +14,19 @@
         <div>
           <h1>Yeni Hesap</h1>
           <p class="entry-subtitle">
-            E-posta ve sifreyle hesap acilir.
+            E-posta ve şifreyle hesap açılır.
           </p>
         </div>
       </header>
 
       <form id="createUserForm" class="entry-form" autocomplete="off">
         <div class="entry-field">
-          <label class="entry-label" for="createNameInput">Kullanici adi</label>
+          <label class="entry-label" for="createNameInput">Kullanıcı adı</label>
           <input
             type="text"
             id="createNameInput"
             class="entry-input"
-            placeholder="kullaniciadi"
+            placeholder="kullanıcıadı"
             autocomplete="username"
             required
           />
@@ -45,13 +45,13 @@
         </div>
 
         <div class="entry-field">
-          <label class="entry-label" for="createPasswordInput">Sifre</label>
+          <label class="entry-label" for="createPasswordInput">Şifre</label>
           <input
             type="password"
             id="createPasswordInput"
-            title="Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol."
+            title="Şifre en az 8 karakter, büyük/küçük harf, rakam ve sembol."
             class="entry-input"
-            placeholder="Sifre"
+            placeholder="Şifre"
             autocomplete="new-password"
             required
           />
@@ -59,14 +59,14 @@
 
         <div class="entry-actions">
           <button id="createAccountButton" class="entry-button" type="submit">
-            Hesap olustur
+            Hesap oluştur
           </button>
         </div>
         <div id="createUserStatus" class="entry-hint"></div>
       </form>
 
       <p class="entry-note">
-        Zaten hesabin varsa <a class="entry-link" href="index.html">giris yap</a>.
+        Zaten hesabın varsa <a class="entry-link" href="index.html">giriş yap</a>.
       </p>
     </main>
 
@@ -257,27 +257,27 @@
 
         function validateInputs(values) {
           if (!values.username || !values.email || !values.password) {
-            setStatus("Kullanici adi, e-posta ve sifre gir.", true);
+            setStatus("Kullanıcı adı, e-posta ve şifre gir.", true);
             return false;
           }
           if (!isValidUsername(values.username)) {
             setStatus(
-              "Kullanici adi 3-20 karakter, harf/rakam/_ olmali.",
+              "Kullanıcı adı 3-20 karakter, harf/rakam/_ olmalı.",
               true
             );
             return false;
           }
           if (!isValidEmail(values.email)) {
-            setStatus("E-posta formatini kontrol et.", true);
+            setStatus("E-posta formatını kontrol et.", true);
             return false;
           }
           if (!supportsCrypto) {
-            setStatus("Bu tarayici sifreyi guvenli saklayamiyor.", true);
+            setStatus("Bu tarayıcı şifreyi güvenli saklayamıyor.", true);
             return false;
           }
           if (!isStrongPassword(values.password)) {
             setStatus(
-              "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli.",
+              "Şifre en az 8 karakter, büyük/küçük harf, rakam ve sembol içermeli.",
               true
             );
             return false;
@@ -299,23 +299,23 @@
             if (!validateInputs(values)) return;
 
             setBusy(true);
-            setStatus("Hesap aciliyor...");
+            setStatus("Hesap açılıyor...");
 
             checkAvailability(values.usernameLower, values.emailLower)
               .then(function (availability) {
                 if (availability.usernameTaken) {
-                  setStatus("Bu kullanici adi kullaniliyor.", true);
+                  setStatus("Bu kullanıcı adı kullanılıyor.", true);
                   return null;
                 }
                 if (availability.emailTaken) {
-                  setStatus("Bu e-posta kullaniliyor.", true);
+                  setStatus("Bu e-posta kullanılıyor.", true);
                   return null;
                 }
                 return derivePasswordHash(values.password).then(function (
                   passwordHash
                 ) {
                   if (!passwordHash) {
-                    setStatus("Sifre olusturulamadi.", true);
+                    setStatus("Şifre oluşturulamadı.", true);
                     return null;
                   }
                   return createUser(values, passwordHash);
@@ -332,7 +332,7 @@
               })
               .catch(function (err) {
                 console.error("create user error", err);
-                setStatus("Hesap acilamadi.", true);
+                setStatus("Hesap açılamadı.", true);
               })
               .finally(function () {
                 setBusy(false);

@@ -701,7 +701,7 @@
   function getDefaultRoomId() {
     if (isHubUser) {
       const firstActive = getFirstActiveUserKey();
-      return firstActive || "user2"; // User1 icin varsayilan sohbet
+      return firstActive || "user2"; // User1 için varsayılan sohbet
     }
     if (userKey) {
       return userKey; // Her user kendi odası
@@ -753,7 +753,7 @@
   function appendImageButton(contentEl, messageKey, imageData) {
     const button = document.createElement("button");
     button.classList.add("view-image-button");
-    button.textContent = "Fotografi gor";
+    button.textContent = "Fotoğrafı gör";
     button.addEventListener("click", () => {
       openViewer(messageKey, imageData);
     });
@@ -777,15 +777,15 @@
   async function sendMessage() {
     if (!messageInput) return;
     if (!canUseChat()) {
-      alert("Once sifreyle giris yap.");
+      alert("Önce şifreyle giriş yap.");
       return;
     }
     if (!supportsCrypto) {
-      alert("Bu tarayici sifreli sohbeti desteklemiyor.");
+      alert("Bu tarayıcı şifreli sohbeti desteklemiyor.");
       return;
     }
     if (!isEncryptionReady()) {
-      showToast("E2EE hazir degil, bekle.");
+      showToast("E2EE hazır değil, bekle.");
       return;
     }
     if (isSendingMessage) return;
@@ -808,7 +808,7 @@
     try {
       const encrypted = await encryptPayload("text", text);
       if (!encrypted) {
-        showToast("Sifreleme hazir degil.");
+        showToast("Şifreleme hazır değil.");
         return;
       }
       await getRoomMessagesRef().push({
@@ -827,7 +827,7 @@
       setTyping(false);
     } catch (err) {
       console.error("send message error", err);
-      showToast("Mesaj gonderilemedi.");
+      showToast("Mesaj gönderilemedi.");
     } finally {
       isSendingMessage = false;
       if (sendButton) sendButton.disabled = false;
@@ -888,15 +888,15 @@
   // FOTOĞRAF GÖNDERME
   async function sendImage(file) {
     if (!canUseChat()) {
-      alert("Once sifreyle giris yap.");
+      alert("Önce şifreyle giriş yap.");
       return;
     }
     if (!supportsCrypto) {
-      alert("Bu tarayici sifreli sohbeti desteklemiyor.");
+      alert("Bu tarayıcı şifreli sohbeti desteklemiyor.");
       return;
     }
     if (!isEncryptionReady()) {
-      showToast("E2EE hazir degil, bekle.");
+      showToast("E2EE hazır değil, bekle.");
       return;
     }
 
@@ -905,7 +905,7 @@
 
     const maxFileSize = 20 * 1024 * 1024; // 20MB
     if (file.size > maxFileSize) {
-      alert("Fotograf cok buyuk (maksimum 20MB).");
+      alert("Fotoğraf çok büyük (maksimum 20MB).");
       return;
     }
 
@@ -917,7 +917,7 @@
       const dataUrl = await resizeImageToDataUrl(file);
       const encrypted = await encryptPayload("image", dataUrl);
       if (!encrypted) {
-        showToast("Sifreleme hazir degil.");
+        showToast("Şifreleme hazır değil.");
         return;
       }
       await getRoomMessagesRef().push({
@@ -933,7 +933,7 @@
       });
     } catch (err) {
       console.error(err);
-      alert("Fotograf hazirlanirken bir hata olustu.");
+      alert("Fotoğraf hazırlanırken bir hata oluştu.");
     } finally {
       isUploadingImage = false;
       if (imageButton) imageButton.disabled = false;
@@ -996,7 +996,7 @@
     });
   }
 
-  // Fotograf goruntuleme
+  // Fotoğraf görüntüleme
   function closeViewer() {
     if (viewerOverlay) viewerOverlay.classList.add("hidden");
     if (viewerImage) viewerImage.src = "";
@@ -1068,7 +1068,7 @@
     if (msg.ciphertext) {
       const placeholder = document.createElement("div");
       placeholder.className = "message-placeholder";
-      placeholder.textContent = "Sifreli mesaj";
+      placeholder.textContent = "Şifreli mesaj";
       contentEl.appendChild(placeholder);
 
       decryptPayload(msg).then((result) => {
@@ -1078,7 +1078,7 @@
           return;
         }
         if (result.error) {
-          placeholder.textContent = "Sifre cozumlenemedi";
+          placeholder.textContent = "Şifre çözümlenemedi";
           return;
         }
         renderPayloadContent(contentEl, result.payload, key);
@@ -1124,7 +1124,7 @@
         return;
       }
       if (msg.imageData) {
-        notifyUser(sender, "Yeni fotograf");
+        notifyUser(sender, "Yeni fotoğraf");
         return;
       }
       if (msg.ciphertext) {
@@ -1135,7 +1135,7 @@
               return;
             }
             if (result.payload.imageData) {
-              notifyUser(sender, "Yeni fotograf");
+              notifyUser(sender, "Yeni fotoğraf");
               return;
             }
           }
@@ -1310,21 +1310,21 @@
       if (!currentPassword) {
         if (!value) {
           if (loginError) {
-            loginError.textContent = "Sifre gir.";
+            loginError.textContent = "Şifre gir.";
           }
           return;
         }
         if (userKey === "user1") {
           if (!supportsCrypto) {
             if (loginError) {
-              loginError.textContent = "Bu tarayici sifreyi olusturamiyor.";
+              loginError.textContent = "Bu tarayıcı şifreyi oluşturamıyor.";
             }
             return;
           }
           if (!isStrongPassword(value)) {
             if (loginError) {
               loginError.textContent =
-                "Sifre en az 8 karakter, buyuk/kucuk harf, rakam ve sembol icermeli.";
+                "Şifre en az 8 karakter, büyük/küçük harf, rakam ve sembol içermeli.";
             }
             return;
           }
@@ -1336,7 +1336,7 @@
             const derived = await derivePasswordHash(value);
             if (!derived) {
               if (loginError) {
-                loginError.textContent = "Sifre olusturulamadi.";
+                loginError.textContent = "Şifre oluşturulamadı.";
               }
               return;
             }
@@ -1349,7 +1349,7 @@
           } catch (err) {
             console.error("setup password error", err);
             if (loginError) {
-              loginError.textContent = "Sifre olusturulamadi.";
+              loginError.textContent = "Şifre oluşturulamadı.";
             }
           } finally {
             loginBusy = false;
@@ -1358,20 +1358,20 @@
           return;
         }
         if (loginError) {
-          loginError.textContent = "Bu kullanici icin sifre ayarlanmamis.";
+          loginError.textContent = "Bu kullanıcı için şifre ayarlanmamış.";
         }
         return;
       }
       if (!value) {
         if (loginError) {
-          loginError.textContent = "Sifre gir.";
+          loginError.textContent = "Şifre gir.";
         }
         return;
       }
 
       if (typeof currentPassword !== "string" && !supportsCrypto) {
         if (loginError) {
-          loginError.textContent = "Bu tarayici sifreyi dogrulayamiyor.";
+          loginError.textContent = "Bu tarayıcı şifreyi doğrulayamıyor.";
         }
         return;
       }
@@ -1391,11 +1391,11 @@
             await maybeUpgradeLegacyPassword(userKey, value, currentPassword);
           }
         } else if (loginError) {
-          loginError.textContent = "Sifre yanlis.";
+          loginError.textContent = "Şifre yanlış.";
         }
       } catch (err) {
         console.error("login error", err);
-        if (loginError) loginError.textContent = "Giris yapilamadi.";
+        if (loginError) loginError.textContent = "Giriş yapılamadı.";
       } finally {
         loginBusy = false;
         if (loginButton) loginButton.disabled = false;

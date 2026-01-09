@@ -104,7 +104,7 @@
             var passwords = results[1].val() || {};
             var slot = getAvailableSlot(names, passwords);
             if (!slot) {
-              setRequestStatus("Bos slot yok.", true);
+              setRequestStatus("Boş slot yok.", true);
               return;
             }
 
@@ -114,7 +114,7 @@
             updates["userRequests/" + requestId] = null;
 
             return db.ref().update(updates).then(function () {
-              setRequestStatus(requestData.name + " icin " + slot + " acildi.");
+              setRequestStatus(requestData.name + " için " + slot + " açıldı.");
             });
           })
           .catch(function (err) {

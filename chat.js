@@ -71,6 +71,11 @@
   const viewerCountdown = document.getElementById("viewerCountdown");
   const viewerClose = document.getElementById("viewerClose");
 
+  const notificationPayloadDefaults = {
+    sound: "/assets/sounds/notification.mp3",
+    icon: "/assets/icons/app-icon.png",
+  };
+
   const userProfiles = new Map();
   const baseTitle = document.title;
   let unreadCount = 0;
@@ -243,14 +248,64 @@
     }
   }
 
-  function notifyUser(sender, preview) {
+  function buildNewMessageEventPayload(options) {
+    const data = options || {};
+    const senderId = data.senderId || "";
+    const senderName = data.senderName || "Kullanıcı";
+    const avatarUrl = data.avatarUrl || "";
+    const content = data.content || "";
+    const timestamp = data.timestamp || Date.now();
+    return {
+      event_type: "new_message",
+      sender: {
+        username: senderName,
+        avatar: avatarUrl,
+        id: senderId,
+      },
+      message: {
+        content: content,
+        timestamp: timestamp,
+        chat_url: `/chat/${senderId}`,
+      },
+      config: {
+        sound: notificationPayloadDefaults.sound,
+        icon: notificationPayloadDefaults.icon,
+      },
+    };
+  }
+
+  function playNotificationSound(soundUrl) {
+    if (!soundUrl) return;
+    try {
+      const audio = new Audio(soundUrl);
+      audio.volume = 0.7;
+      audio.play().catch(() => {});
+    } catch (err) {
+      console.warn("notification sound error", err);
+    }
+  }
+
+  function notifyUser(eventPayloadOrSender, preview) {
     if (!allowNotifications || !shouldNotify()) return;
     bumpUnread();
-    const message = preview || "Yeni mesaj";
+    const eventPayload =
+      eventPayloadOrSender && typeof eventPayloadOrSender === "object"
+        ? eventPayloadOrSender
+        : buildNewMessageEventPayload({
+            senderName: eventPayloadOrSender,
+            content: preview || "Yeni mesaj",
+          });
+    const sender = eventPayload.sender.username || "Kullanıcı";
+    const message = eventPayload.message.content || "Yeni mesaj";
+    const config = eventPayload.config || {};
     showToast(`${sender}: ${message}`);
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(sender, { body: message, icon: "logo.png" });
+      new Notification(sender, {
+        body: message,
+        icon: config.icon || "logo.png",
+      });
     }
+    playNotificationSound(config.sound);
   }
 
   function setupNotificationHandlers() {
@@ -545,7 +600,15 @@
     const cached = userProfiles.get(uid);
     if (cached && cached.username) return cached.username;
     if (uid === currentUser.id) return currentUser.username;
-    return "Kullanici";
+    return "Kullanıcı";
+  }
+
+  function getUserAvatarById(uid) {
+    const cached = userProfiles.get(uid);
+    if (cached && cached.avatar) return cached.avatar;
+    if (cached && cached.photoURL) return cached.photoURL;
+    if (cached && cached.photoUrl) return cached.photoUrl;
+    return "";
   }
 
   function getRoomId(uidA, uidB) {
@@ -594,7 +657,7 @@
   function setHeader(peerId) {
     if (!headerTitle) return;
     if (!peerId) {
-      headerTitle.textContent = "Sohbet sec";
+      headerTitle.textContent = "Sohbet seç";
       return;
     }
     const name = getUserNameById(peerId);
@@ -620,7 +683,7 @@
 
   function ensureRoomSelected() {
     if (!currentPeerId || !currentRoomId) {
-      showToast("Once sohbet sec.");
+      showToast("Önce sohbet seç.");
       return false;
     }
     return true;
@@ -635,7 +698,7 @@
     if (msg.fromId) {
       return getUserNameById(msg.fromId);
     }
-    return "Kullanici";
+    return "Kullanıcı";
   }
 
   function trimPreview(text) {
@@ -732,7 +795,7 @@
   function updateMessagePreviewCache(messageKey, payload) {
     if (!messageKey || !payload) return;
     if (payload.imageData) {
-      messagePreviewCache.set(messageKey, { preview: "Fotograf", kind: "image" });
+      messagePreviewCache.set(messageKey, { preview: "Fotoğraf", kind: "image" });
       return;
     }
     if (payload.text) {
@@ -747,7 +810,7 @@
     const cached = messagePreviewCache.get(messageKey);
     if (cached && cached.preview) return cached;
     if (msg && msg.kind === "image") {
-      return { preview: "Fotograf", kind: "image" };
+      return { preview: "Fotoğraf", kind: "image" };
     }
     return { preview: "Mesaj", kind: (msg && msg.kind) || "text" };
   }
@@ -792,7 +855,7 @@
       replyTo.fromId === currentUser.id
         ? "Sen"
         : getUserNameById(replyTo.fromId);
-    titleEl.textContent = `Yanit: ${name}`;
+    titleEl.textContent = `Yanıt: ${name}`;
 
     const textEl = document.createElement("div");
     textEl.className = "message-reply-text";
@@ -800,7 +863,7 @@
     const preview =
       replyTo.preview ||
       (cached && cached.preview) ||
-      (replyTo.kind === "image" ? "Fotograf" : "Mesaj");
+      (replyTo.kind === "image" ? "Fotoğraf" : "Mesaj");
     textEl.textContent = preview;
 
     replyEl.appendChild(titleEl);
@@ -818,7 +881,7 @@
   function appendImageButton(contentEl, messageKey, imageData) {
     const button = document.createElement("button");
     button.classList.add("view-image-button");
-    button.textContent = "Fotografi gor";
+    button.textContent = "Fotoğrafı gör";
     button.addEventListener("click", () => {
       openViewer(messageKey, imageData);
     });
@@ -880,15 +943,15 @@
     if (!messageInput) return;
     if (!ensureRoomSelected()) return;
     if (hasBlock(currentPeerId)) {
-      showToast("Mesaj gonderemezsin. Engel var.");
+      showToast("Mesaj gönderemezsin. Engel var.");
       return;
     }
     if (!supportsCrypto) {
-      alert("Bu tarayici sifreli sohbeti desteklemiyor.");
+      alert("Bu tarayıcı şifreli sohbeti desteklemiyor.");
       return;
     }
     if (!isEncryptionReady()) {
-      showToast("E2EE hazir degil, bekle.");
+      showToast("E2EE hazır değil, bekle.");
       return;
     }
     if (isSendingMessage) return;
@@ -912,7 +975,7 @@
     try {
       const encrypted = await encryptPayload("text", text);
       if (!encrypted) {
-        showToast("Sifreleme hazir degil.");
+        showToast("Şifreleme hazır değil.");
         return;
       }
       const messageData = {
@@ -940,7 +1003,7 @@
       clearReplyTarget();
     } catch (err) {
       console.error("send message error", err);
-      showToast("Mesaj gonderilemedi.");
+      showToast("Mesaj gönderilemedi.");
     } finally {
       isSendingMessage = false;
       if (sendButton) sendButton.disabled = false;
@@ -950,15 +1013,15 @@
   async function sendImage(file) {
     if (!ensureRoomSelected()) return;
     if (hasBlock(currentPeerId)) {
-      showToast("Fotograf gonderemezsin. Engel var.");
+      showToast("Fotoğraf gönderemezsin. Engel var.");
       return;
     }
     if (!supportsCrypto) {
-      alert("Bu tarayici sifreli sohbeti desteklemiyor.");
+      alert("Bu tarayıcı şifreli sohbeti desteklemiyor.");
       return;
     }
     if (!isEncryptionReady()) {
-      showToast("E2EE hazir degil, bekle.");
+      showToast("E2EE hazır değil, bekle.");
       return;
     }
 
@@ -966,7 +1029,7 @@
 
     const maxFileSize = 20 * 1024 * 1024;
     if (file.size > maxFileSize) {
-      alert("Fotograf cok buyuk (maksimum 20MB).");
+      alert("Fotoğraf çok büyük (maksimum 20MB).");
       return;
     }
 
@@ -987,7 +1050,7 @@
       const dataUrl = await resizeImageToDataUrl(file);
       const encrypted = await encryptPayload("image", dataUrl);
       if (!encrypted) {
-        showToast("Sifreleme hazir degil.");
+        showToast("Şifreleme hazır değil.");
         return;
       }
       const messageData = {
@@ -1013,7 +1076,7 @@
       clearReplyTarget();
     } catch (err) {
       console.error(err);
-      alert("Fotograf hazirlanirken bir hata olustu.");
+      alert("Fotoğraf hazırlanırken bir hata oluştu.");
     } finally {
       isUploadingImage = false;
       if (imageButton) imageButton.disabled = false;
@@ -1046,7 +1109,7 @@
 
       if (!typingIndicator) return;
       typingIndicator.textContent = otherTypingName
-        ? `${otherTypingName} yaziyor...`
+        ? `${otherTypingName} yazıyor...`
         : "";
     });
   }
@@ -1189,7 +1252,7 @@
     if (msg.ciphertext) {
       const placeholder = document.createElement("div");
       placeholder.className = "message-placeholder";
-      placeholder.textContent = "Sifreli mesaj";
+      placeholder.textContent = "Şifreli mesaj";
       bodyEl.appendChild(placeholder);
 
       decryptPayload(msg).then((result) => {
@@ -1199,7 +1262,7 @@
           return;
         }
         if (result.error) {
-          placeholder.textContent = "Sifre cozumlenemedi";
+          placeholder.textContent = "Şifre çözümlenemedi";
           return;
         }
         renderPayloadContent(bodyEl, result.payload, key);
@@ -1219,7 +1282,7 @@
     const replyButton = document.createElement("button");
     replyButton.type = "button";
     replyButton.className = "message-reply-button";
-    replyButton.setAttribute("aria-label", "Yanitla");
+    replyButton.setAttribute("aria-label", "Yanıtla");
     replyButton.appendChild(createReplyIcon());
     replyButton.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1231,7 +1294,7 @@
     const menuButton = document.createElement("button");
     menuButton.type = "button";
     menuButton.className = "message-menu-button";
-    menuButton.setAttribute("aria-label", "Mesaj menusu");
+    menuButton.setAttribute("aria-label", "Mesaj menüsü");
     menuButton.appendChild(createMenuIcon());
 
     const menuEl = document.createElement("div");
@@ -1317,24 +1380,44 @@
         updateRoomMetadata(currentRoomId, msg.fromId, msg.timestamp || Date.now());
       }
 
-      const sender = getMessageSenderName(msg);
+      const senderId = msg.fromId || "";
+      const senderName = getMessageSenderName(msg);
+      const avatarUrl = getUserAvatarById(senderId);
+      const timestamp = msg.timestamp || Date.now();
+      const buildEventPayload = (content) =>
+        buildNewMessageEventPayload({
+          senderId,
+          senderName,
+          avatarUrl,
+          content,
+          timestamp,
+        });
+
       if (msg.ciphertext) {
         decryptPayload(msg).then((result) => {
           if (result && result.payload) {
             if (result.payload.text) {
-              notifyUser(sender, trimPreview(result.payload.text));
+              notifyUser(buildEventPayload(trimPreview(result.payload.text)));
               return;
             }
             if (result.payload.imageData) {
-              notifyUser(sender, "Yeni fotograf");
+              notifyUser(buildEventPayload("Yeni fotoğraf"));
               return;
             }
           }
-          notifyUser(sender, "Yeni mesaj");
+          notifyUser(buildEventPayload("Yeni mesaj"));
         });
         return;
       }
-      notifyUser(sender, "Yeni mesaj");
+      if (msg.text) {
+        notifyUser(buildEventPayload(trimPreview(msg.text)));
+        return;
+      }
+      if (msg.imageData) {
+        notifyUser(buildEventPayload("Yeni fotoğraf"));
+        return;
+      }
+      notifyUser(buildEventPayload("Yeni mesaj"));
     });
 
     messagesRef.on("child_changed", (snapshot) => {
@@ -1352,7 +1435,7 @@
   async function openConversation(peerId) {
     if (!peerId) return;
     if (hasBlock(peerId)) {
-      showToast("Sohbet acilamiyor. Engel var.");
+      showToast("Sohbet açılamıyor. Engel var.");
       return;
     }
     setHomeView(false);
@@ -1446,7 +1529,7 @@
       const menuButton = document.createElement("button");
       menuButton.type = "button";
       menuButton.className = "conversation-menu-button";
-      menuButton.setAttribute("aria-label", "Sohbet menusu");
+      menuButton.setAttribute("aria-label", "Sohbet menüsü");
       menuButton.appendChild(createMenuIcon());
 
       const menuEl = document.createElement("div");
@@ -1455,7 +1538,7 @@
       const unfollowButton = document.createElement("button");
       unfollowButton.type = "button";
       unfollowButton.className = "conversation-menu-item";
-      unfollowButton.textContent = "Takipten cik";
+      unfollowButton.textContent = "Takipten çık";
       unfollowButton.addEventListener("click", (event) => {
         event.stopPropagation();
         menuEl.classList.add("hidden");
@@ -1510,11 +1593,11 @@
         if (currentPeerId === peerId) {
           resetConversationView();
         }
-        showToast("Takipten cikildi.");
+        showToast("Takipten çıkıldı.");
       })
       .catch((err) => {
         console.error("unfollow error", err);
-        showToast("Takipten cikilamadi.");
+        showToast("Takipten çıkılamadı.");
       });
   }
 
@@ -1531,11 +1614,11 @@
         if (currentPeerId === peerId) {
           resetConversationView();
         }
-        showToast("Kullanici engellendi.");
+        showToast("Kullanıcı engellendi.");
       })
       .catch((err) => {
         console.error("block error", err);
-        showToast("Engelleme basarisiz.");
+        showToast("Engelleme başarısız.");
       });
   }
 
@@ -1547,11 +1630,11 @@
     db.ref()
       .update(updates)
       .then(() => {
-        showToast("Engel kaldirildi.");
+        showToast("Engel kaldırıldı.");
       })
       .catch((err) => {
         console.error("unblock error", err);
-        showToast("Engel kaldirilamadi.");
+        showToast("Engel kaldırılamadı.");
       });
   }
 
@@ -1597,7 +1680,7 @@
     if (!filtered.length) {
       const empty = document.createElement("div");
       empty.className = "search-empty";
-      empty.textContent = "Sonuc bulunamadi.";
+      empty.textContent = "Sonuç bulunamadı.";
       searchResults.appendChild(empty);
       return;
     }
@@ -1608,7 +1691,7 @@
 
       const nameEl = document.createElement("div");
       nameEl.className = "search-name";
-      nameEl.textContent = user.username || "Kullanici";
+      nameEl.textContent = user.username || "Kullanıcı";
       item.appendChild(nameEl);
 
       const actions = document.createElement("div");
@@ -1620,13 +1703,13 @@
         );
       } else if (isPeerBlockedByMe(user.id)) {
         actions.appendChild(
-          createSearchAction("Engeli kaldir", {
+          createSearchAction("Engeli kaldır", {
             onClick: () => unblockUser(user.id),
           })
         );
       } else if (approvedPeers.has(user.id)) {
         actions.appendChild(
-          createSearchAction("Sohbet ac", {
+          createSearchAction("Sohbet aç", {
             primary: true,
             onClick: () => openConversation(user.id),
           })
@@ -1638,7 +1721,7 @@
         );
       } else if (pendingIncoming.has(user.id)) {
         actions.appendChild(
-          createSearchAction("Istek bekliyor", { disabled: true })
+          createSearchAction("İstek bekliyor", { disabled: true })
         );
         actions.appendChild(
           createSearchAction("Engelle", {
@@ -1647,7 +1730,7 @@
         );
       } else if (pendingOutgoing.has(user.id)) {
         actions.appendChild(
-          createSearchAction("Istek gonderildi", { disabled: true })
+          createSearchAction("İstek gönderildi", { disabled: true })
         );
         actions.appendChild(
           createSearchAction("Engelle", {
@@ -1656,7 +1739,7 @@
         );
       } else {
         actions.appendChild(
-          createSearchAction("Istek gonder", {
+          createSearchAction("İstek gönder", {
             onClick: () => sendChatRequest(user.id),
           })
         );
@@ -1680,7 +1763,7 @@
     if (!entries.length) {
       const empty = document.createElement("div");
       empty.className = "request-empty";
-      empty.textContent = "Istek yok.";
+      empty.textContent = "İstek yok.";
       requestList.appendChild(empty);
       return;
     }
@@ -1795,7 +1878,7 @@
       })
       .catch((err) => {
         console.error("user search error", err);
-        showToast("Arama yapilamadi.");
+        showToast("Arama yapılamadı.");
       });
   }
 
@@ -1820,19 +1903,19 @@
       return;
     }
     if (isPeerBlockedByMe(targetId)) {
-      showToast("Engelledigin kullaniciya istek gonderemezsin.");
+      showToast("Engellediğin kullanıcıya istek gönderemezsin.");
       return;
     }
     if (isPeerBlockingMe(targetId)) {
-      showToast("Bu kullanici seni engelledi.");
+      showToast("Bu kullanıcı seni engelledi.");
       return;
     }
     if (pendingIncoming.has(targetId)) {
-      showToast("Bu kullanicidan istek var.");
+      showToast("Bu kullanıcıdan istek var.");
       return;
     }
     if (pendingOutgoing.has(targetId)) {
-      showToast("Istek zaten gonderildi.");
+      showToast("İstek zaten gönderildi.");
       return;
     }
     const now = Date.now();
@@ -1850,13 +1933,13 @@
     db.ref()
       .update(updates)
       .then(() => {
-        showToast("Istek gonderildi.");
+        showToast("İstek gönderildi.");
       })
       .catch((err) => {
         console.error("request send error", err);
         pendingOutgoing.delete(targetId);
         renderSearchResults(lastSearchResults, lastSearchQuery);
-        showToast("Istek gonderilemedi.");
+        showToast("İstek gönderilemedi.");
       });
   }
 
@@ -1884,11 +1967,11 @@
     db.ref()
       .update(updates)
       .then(() => {
-        showToast("Istek onaylandi.");
+        showToast("İstek onaylandı.");
       })
       .catch((err) => {
         console.error("request approve error", err);
-        showToast("Istek onaylanamadi.");
+        showToast("İstek onaylanamadı.");
       });
   }
 
@@ -1902,11 +1985,11 @@
     db.ref()
       .update(updates)
       .then(() => {
-        showToast("Istek reddedildi.");
+        showToast("İstek reddedildi.");
       })
       .catch((err) => {
         console.error("request decline error", err);
-        showToast("Istek reddedilemedi.");
+        showToast("İstek reddedilemedi.");
       });
   }
 
@@ -2006,7 +2089,7 @@
       blockedUsers = new Set(Object.keys(data));
       renderSearchResults(lastSearchResults, lastSearchQuery);
       if (currentPeerId && blockedUsers.has(currentPeerId)) {
-        showToast("Kullanici engellendi.");
+        showToast("Kullanıcı engellendi.");
         resetConversationView();
       }
     });
@@ -2018,7 +2101,7 @@
       blockedByUsers = new Set(Object.keys(data));
       renderSearchResults(lastSearchResults, lastSearchQuery);
       if (currentPeerId && blockedByUsers.has(currentPeerId)) {
-        showToast("Bu kullanici seni engelledi.");
+        showToast("Bu kullanıcı seni engelledi.");
         resetConversationView();
       }
     });
